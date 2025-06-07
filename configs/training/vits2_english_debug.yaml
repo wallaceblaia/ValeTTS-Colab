@@ -3,22 +3,22 @@ name: "vits2_english_debug"
 
 # === Configuração do Modelo ===
 model:
-  # Arquitetura VITS2 reduzida para debug
-  hidden_channels: 192 # Reduzido de 256
-  filter_channels: 768 # Reduzido de 1024
-  n_heads: 2 # Reduzido de 4
-  n_layers: 4 # Reduzido de 6
-  kernel_size: 3
-  p_dropout: 0.1
-  n_speakers: 52 # Detectado automaticamente do dataset
-  gin_channels: 256
+  name: "VITS2"
+  text_encoder_hidden_dim: 128 # Reduzido de 192
+  latent_dim: 128 # Reduzido de 192
+  mel_channels: 80
+  n_speakers: 52 # Ajustar conforme número de falantes no dataset
+  speaker_embedding_dim: 256 # Reduzido de 512
 
-  # Configurações específicas VITS2
-  use_spectral_norm: false
-  use_weight_norm: true
-  inter_channels: 192
-  hidden_channels_encoder: 192
-  hidden_channels_decoder: 512
+  # Configurações específicas para inglês
+  text_processor: "english"
+
+  # Configurações do generator (reduzidas)
+  generator_initial_channels: 256 # Reduzido de 512
+  gin_channels: 256 # Reduzido de 512
+
+  # Configurações de inferência
+  inference_only: false
 
 # === Configuração de Treinamento DEBUG ===
 training:
@@ -136,3 +136,13 @@ hardware:
   sync_batchnorm: false # Desabilitado para debug
   benchmark: false # Desabilitado para debug
   deterministic: false
+
+# === Configuração de Validação ===
+validation:
+  val_check_interval: 1.0
+  limit_val_batches: 1.0
+  num_sanity_val_steps: 2 # Reduzido para debug
+
+  # Geração de amostras para debug
+  generate_samples: true
+  sample_every_n_epochs: 1 # A cada época para debug
