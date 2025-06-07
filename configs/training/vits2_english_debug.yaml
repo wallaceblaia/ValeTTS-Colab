@@ -1,0 +1,100 @@
+# Configuração DEBUG para teste rápido do sistema em inglês
+name: "vits2_english_debug"
+
+# === Configuração do Modelo ===
+model:
+  # Arquitetura VITS2 reduzida para debug
+  hidden_channels: 192 # Reduzido de 256
+  filter_channels: 768 # Reduzido de 1024
+  n_heads: 2 # Reduzido de 4
+  n_layers: 4 # Reduzido de 6
+  kernel_size: 3
+  p_dropout: 0.1
+  n_speakers: 52 # Detectado automaticamente do dataset
+  gin_channels: 256
+
+  # Configurações específicas VITS2
+  use_spectral_norm: false
+  use_weight_norm: true
+  inter_channels: 192
+  hidden_channels_encoder: 192
+  hidden_channels_decoder: 512
+
+# === Configuração de Treinamento DEBUG ===
+training:
+  max_epochs: 3 # Apenas 3 épocas para teste
+  batch_size: 2 # Muito pequeno para debug
+  learning_rate: 1e-4
+  weight_decay: 1e-6
+  beta1: 0.8
+  beta2: 0.99
+  use_amp: true
+  gradient_clip_val: 1000.0
+  accumulate_grad_batches: 1
+
+  # Logging frequente para debug
+  log_every_n_steps: 5
+  val_check_interval: 0.5 # Validação 2x por época
+  save_every_n_epochs: 1 # Salvar toda época
+
+  # Loss weights simples
+  lambda_mel: 45.0
+  lambda_kl: 1.0
+  lambda_gen: 1.0
+  lambda_disc: 1.0
+
+# === Configuração de Dados DEBUG ===
+data:
+  data_dir: "data/generated/Dataset-Unificado"
+  metadata_file: "data/generated/Dataset-Unificado/metadata.csv"
+  sample_rate: 22050
+  n_fft: 1024
+  hop_length: 256
+  n_mels: 80
+  max_wav_value: 32768.0
+
+  # LIMITE PARA DEBUG - apenas 100 amostras
+  max_samples_debug: 100
+  cache_preprocessed: true
+
+  # Data loading para debug
+  num_workers: 2 # Reduzido
+  pin_memory: true
+  persistent_workers: false # Para debug
+
+# === Configuração Dataset ===
+dataset_config:
+  locale_column: "locale"
+  expected_locale: "en"
+  text_column: "text_normalized"
+  audio_path_column: "audio_path"
+  speaker_column: "speaker_id"
+  duration_column: "duration"
+
+# === Processamento de Texto INGLÊS ===
+text_processor:
+  use_phonemes: true
+  phoneme_backend: "espeak"
+  phoneme_language: "en-us"
+  vocab_size: 256 # Reduzido para debug
+
+  # Cache para acelerar
+  cache_phonemes: true
+  clean_text: true
+
+  # Configuração específica inglês
+  language: "en-us"
+  class: "valetts.data.preprocessing.text_en.EnglishTextPreprocessor"
+
+# === Monitor LLM (Opcional) ===
+llm_monitor:
+  enabled: true
+  provider: "openrouter"
+  model: "anthropic/claude-3.5-haiku"
+  monitor_every_epochs: 1 # A cada época para debug
+  auto_adjust: false # Desabilitado para debug
+  send_metrics: false
+
+  # Configuração de debug
+  max_history: 5
+  temperature: 0.1

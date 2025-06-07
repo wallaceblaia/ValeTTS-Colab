@@ -232,11 +232,15 @@ def create_data_loaders(config: Dict[str, Any]) -> tuple:
         "hop_length": data_config.get("hop_length", 256),
     }
 
+    # Parâmetros para debug
+    max_samples_debug = data_config.get("max_samples_debug")
+
     # Dataset de treino
     train_dataset = TTSDataset(
         data_dir=data_config["data_dir"],
         split="train",
         audio_config=audio_config,
+        max_samples=max_samples_debug,
     )
 
     # Dataset de validação
@@ -244,6 +248,7 @@ def create_data_loaders(config: Dict[str, Any]) -> tuple:
         data_dir=data_config["data_dir"],
         split="val",
         audio_config=audio_config,
+        max_samples=max_samples_debug // 10 if max_samples_debug else None,
     )
 
     # Importar collate_fn do nosso dataset

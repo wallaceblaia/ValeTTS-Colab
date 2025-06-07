@@ -24,11 +24,14 @@ model:
 # === Configuração de Treinamento ===
 training:
   # Parâmetros básicos otimizados para datasets em inglês
-  learning_rate: 5.0e-5 # Conservativo para evitar divergência
-  batch_size: 12 # Balanceado para GPU/CPU
-  max_epochs: 200 # Ajustar conforme tamanho do dataset
-  accumulate_grad_batches: 3 # Batch efetivo = 36 (12×3)
+  learning_rate: 2e-4
+  batch_size: 6
+  max_epochs: 200
+  accumulate_grad_batches: 2
   max_grad_norm: 0.5 # Gradient clipping
+  weight_decay: 1e-6
+  beta1: 0.8
+  beta2: 0.99
 
   # Loss weights balanceados para inglês
   mel_loss_weight: 45.0
@@ -39,7 +42,7 @@ training:
 
   # Otimização
   use_amp: true
-  gradient_clip_val: 1.0
+  gradient_clip_val: 1000.0
   discriminator_update_frequency: 1
 
   # Scheduler otimizado
@@ -49,6 +52,11 @@ training:
     factor: 0.7
     patience: 15
     min_lr: 1.0e-6
+
+  # Checkpointing e logging otimizados
+  save_every_n_epochs: 5
+  log_every_n_steps: 50 # Log mais frequente
+  val_check_interval: 0.25 # Validação a cada 25% da época
 
 # === Configuração de Dados - ESPECÍFICO PARA INGLÊS ===
 data:
@@ -81,6 +89,10 @@ data:
   n_fft: 1024
   hop_length: 256
   win_length: 1024
+  max_wav_value: 32768.0
+  # Cache para acelerar processamento
+  cache_preprocessed: true
+  max_samples_debug: null # Para debug: usar menos amostras
 
   # Data loading otimizado
   num_workers: 6

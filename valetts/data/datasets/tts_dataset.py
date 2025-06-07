@@ -62,13 +62,18 @@ class TTSDataset(Dataset):
         # Carregar metadados
         self.samples = self._load_metadata()
 
-        # Limitar amostras se necessário
+        # Limitar amostras se necessário (para debug)
         if max_samples:
             self.samples = self.samples[:max_samples]
+            logger.info(f"🐛 DEBUG: Limitado a {max_samples} amostras")
 
         # Estatísticas
-        self.speakers = list(set(sample["speaker_id"] for sample in self.samples))
-        self.speaker_to_id = {speaker: i for i, speaker in enumerate(self.speakers)}
+        self.speakers = list(
+            set(sample["speaker_id"] for sample in self.samples)
+        )
+        self.speaker_to_id = {
+            speaker: i for i, speaker in enumerate(self.speakers)
+        }
 
         logger.info(f"📊 TTSDataset criado - Split: {split}")
         logger.info(f"   📈 Amostras: {len(self.samples)}")
@@ -102,17 +107,44 @@ class TTSDataset(Dataset):
             )
             return all_samples
 
-        # Fallback para CSV
+        # Fallback para CSV com split automático
         csv_file = self.data_dir / "metadata.csv"
         if csv_file.exists():
             logger.info(f"📋 Carregando CSV: {csv_file}")
             df = pd.read_csv(csv_file)
 
-            # Filtrar por split se disponível
+            # Se há coluna split, usar ela
             if "split" in df.columns:
-                df = df[df["split"] == self.split]
+                df_split = df[df["split"] == self.split]
+                if len(df_split) > 0:
+                    logger.info(
+                        f"📊 Split {self.split}: {len(df_split)} amostras"
+                    )
+                    return df_split.to_dict("records")
 
-            return df.to_dict("records")
+            # SPLIT AUTOMÁTICO se não há coluna split
+            logger.info(f"🔀 Criando split automático para {self.split}")
+
+            # Shuffle determinístico baseado no speaker para manter consistência
+            df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+            total_samples = len(df)
+            if self.split == "train":
+                # 90% para treino
+                end_idx = int(0.9 * total_samples)
+                df_split = df[:end_idx]
+            elif self.split == "val":
+                # 10% para validação
+                start_idx = int(0.9 * total_samples)
+                df_split = df[start_idx:]
+            else:
+                # Split desconhecido, usar tudo
+                df_split = df
+
+            logger.info(
+                f"📊 Split automático {self.split}: {len(df_split)}/{total_samples} amostras"
+            )
+            return df_split.to_dict("records")
 
         raise FileNotFoundError(
             f"❌ Nenhum arquivo de metadados encontrado em {self.data_dir}"
@@ -203,7 +235,9 @@ class TTSDataset(Dataset):
         }
 
 
-def collate_fn(batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
+def collate_fn(
+    batch: List[Dict[str, torch.Tensor]],
+) -> Dict[str, torch.Tensor]:
     """
     Collate function para o DataLoader.
 
