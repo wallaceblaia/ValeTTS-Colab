@@ -57,8 +57,17 @@ logging:
     dirpath: "checkpoints/debug"
     filename: "vits2_debug-{epoch:02d}-{val_loss:.2f}"
 
+  # Early stopping para debug (desabilitado)
+  early_stopping:
+    monitor: "val_loss"
+    mode: "min"
+    patience: 10
+    min_delta: 0.001
+
   # TensorBoard simplificado
   tensorboard:
+    save_dir: "logs/tensorboard"
+    name: "vits2_debug"
     log_graph: false
     log_hparams: true
 
