@@ -1,0 +1,283 @@
+# Configuração de Treinamento VITS2 - Dataset em Inglês
+# Modelo: VITS2 Multi-speaker adaptado para inglês
+# Processamento: Phonemes específicos para inglês
+
+# === Configuração do Modelo ===
+model:
+  name: "VITS2"
+  text_encoder_hidden_dim: 192
+  latent_dim: 192
+  mel_channels: 80
+  n_speakers: 52 # Ajustar conforme número de falantes no dataset
+  speaker_embedding_dim: 512
+
+  # Configurações específicas para inglês
+  text_processor: "english"
+
+  # Configurações do generator
+  generator_initial_channels: 512
+  gin_channels: 512
+
+  # Configurações de inferência
+  inference_only: false
+
+# === Configuração de Treinamento ===
+training:
+  # Parâmetros básicos otimizados para datasets em inglês
+  learning_rate: 5.0e-5 # Conservativo para evitar divergência
+  batch_size: 12 # Balanceado para GPU/CPU
+  max_epochs: 200 # Ajustar conforme tamanho do dataset
+  accumulate_grad_batches: 3 # Batch efetivo = 36 (12×3)
+  max_grad_norm: 0.5 # Gradient clipping
+
+  # Loss weights balanceados para inglês
+  mel_loss_weight: 45.0
+  kl_loss_weight: 0.1 # Reduzido para estabilidade
+  adv_loss_weight: 0.5 # Início suave
+  fm_loss_weight: 1.0 # Estabilidade
+  duration_loss_weight: 1.0
+
+  # Otimização
+  use_amp: true
+  gradient_clip_val: 1.0
+  discriminator_update_frequency: 1
+
+  # Scheduler otimizado
+  scheduler:
+    name: "ReduceLROnPlateau"
+    mode: "min"
+    factor: 0.7
+    patience: 15
+    min_lr: 1.0e-6
+
+# === Configuração de Dados - ESPECÍFICO PARA INGLÊS ===
+data:
+  dataset_format: "csv" # Formato do dataset
+  data_dir: "data/generated/Dataset-Unificado" # Dataset atual em inglês
+  metadata_file: "data/generated/Dataset-Unificado/metadata.csv"
+
+  # Configuração de idioma (baseada na coluna locale do dataset)
+  locale_column: "locale" # Coluna que contém o idioma no CSV (valor: "en")
+
+  # Processamento de texto específico para inglês
+  text_processor:
+    class: "EnglishTextPreprocessor"
+    locale: "en" # Usar valor da coluna locale
+    use_phonemes: true # Usar phonemes para melhor qualidade
+    normalize_numbers: true # Normalizar números para inglês
+    normalize_whitespace: true
+    lowercase: true
+
+  # Configuração de phonemes para inglês
+  phoneme_config:
+    backend: "espeak" # Usar espeak para G2P em inglês
+    locale: "en" # Valor exato da coluna locale no dataset
+    with_stress: false # Sem stress markers por simplicidade
+    preserve_punctuation: true
+
+  # Preprocessing de áudio (universal)
+  sample_rate: 22050
+  n_mels: 80
+  n_fft: 1024
+  hop_length: 256
+  win_length: 1024
+
+  # Data loading otimizado
+  num_workers: 6
+  pin_memory: true
+  persistent_workers: true
+
+  # Divisão de dados
+  train_split: 0.95 # 95% para treino
+  val_split: 0.05 # 5% para validação
+
+  # Augmentation (mantido universal)
+  use_augmentation: true
+  volume_range: [0.85, 1.15]
+  pitch_range: [-1.5, 1.5]
+
+# === Configuração do Monitoramento LLM ===
+llm_monitor:
+  enabled: true
+
+  # Configuração do LLM
+  provider: "openrouter"
+  model: "anthropic/claude-3-5-sonnet-20241022"
+  api_key_env: "OPENROUTER_API_KEY"
+  base_url: "https://openrouter.ai/api/v1"
+
+  # Frequência de monitoramento
+  monitor_every_epochs: 10
+  monitor_every_steps: null
+  save_analysis_history: true
+  max_history_entries: 100
+
+  # Relatórios
+  generate_reports: true
+  report_every_epochs: 5
+
+  # Configuração dinâmica
+  dynamic_config_path: "configs/training/llm_dynamic_config_english.yaml"
+  backup_original_config: true
+
+  # Ranges de segurança
+  lr_min: 1.0e-6
+  lr_max: 5.0e-3
+  lr_change_factor_max: 1.5
+
+  batch_size_min: 8
+  batch_size_max: 64
+  batch_size_change_factor_max: 1.5
+
+  loss_weight_min: 0.5
+  loss_weight_max: 100.0
+  loss_weight_change_factor_max: 1.3
+
+  # Segurança
+  require_human_approval: true
+  critical_change_threshold: 0.25
+  max_consecutive_changes: 3
+
+  # Métricas específicas para inglês
+  metrics_to_monitor:
+    - "train_loss_total"
+    - "train_loss_mel"
+    - "train_loss_kl"
+    - "train_loss_adv"
+    - "train_loss_fm"
+    - "train_loss_duration"
+    - "val_loss_total"
+    - "val_loss_mel"
+    - "learning_rate"
+    - "grad_norm"
+    - "epoch_time"
+    - "memory_usage"
+    - "phoneme_accuracy" # Métrica específica para phonemes
+    - "text_processing_time"
+
+  # Limites de alerta
+  loss_spike_threshold: 2.5
+  grad_norm_threshold: 15.0
+  memory_usage_threshold: 0.85
+
+  include_context_epochs: 5
+
+# === Configuração de Logging ===
+logging:
+  tensorboard:
+    save_dir: "logs/tensorboard"
+    name: "vits2_english_dataset"
+    version: null
+
+  wandb:
+    enabled: false
+    project: "valetts-vits2-english"
+    name: "vits2-english-run"
+    tags: ["vits2", "english-dataset", "multispeaker", "phonemes"]
+
+  checkpoint:
+    dirpath: "checkpoints/vits2_english"
+    filename: "vits2-english-{epoch:03d}-{val_loss_total:.4f}"
+    save_top_k: 5
+    mode: "min"
+    monitor: "val_loss_total"
+    save_last: true
+    every_n_epochs: 10
+
+  early_stopping:
+    enabled: true
+    monitor: "val_loss_total"
+    patience: 50
+    mode: "min"
+    min_delta: 0.0005
+
+# === Configuração de Hardware ===
+hardware:
+  accelerator: "gpu"
+  devices: 1
+  precision: "16-mixed"
+  strategy: "auto"
+  sync_batchnorm: true
+  benchmark: true
+  deterministic: false
+
+# === Configuração de Validação ===
+validation:
+  val_check_interval: 1.0
+  limit_val_batches: 1.0
+  num_sanity_val_steps: 5
+
+  # Geração de amostras
+  generate_samples: true
+  sample_every_n_epochs: 10
+
+# === Configurações Específicas do Dataset Inglês ===
+dataset_config:
+  # Mapeamento de colunas do CSV
+  audio_column: "audio_path"
+  text_column: "text_normalized" # Ou "text" se não normalizado
+  speaker_column: "speaker_id"
+  duration_column: "duration"
+
+  # Filtros de qualidade
+  min_duration: 0.5 # segundos
+  max_duration: 10.0 # segundos
+  min_text_length: 5 # caracteres
+  max_text_length: 200 # caracteres
+
+  # Validação específica para inglês
+  required_columns: ["audio_path", "text_normalized", "speaker_id", "locale"]
+  expected_locale: "en" # Valor esperado na coluna locale
+  validate_phonemes: true # Validar se phonemes estão corretos
+
+# === Configurações de Processamento Específicas ===
+preprocessing:
+  # Text normalization para inglês
+  expand_abbreviations: true
+  normalize_numbers: true
+  convert_ordinals: true # 1st -> first
+  expand_contractions: true # don't -> do not
+
+  # Phoneme processing
+  use_phonemes: true
+  phoneme_separator: " " # Separador entre phonemes
+  handle_oov_words: true # Out-of-vocabulary words
+
+  # Audio processing (universal)
+  normalize_audio: true
+  trim_silence: true
+  target_db: -23.0
+
+# === Modelo Específico para Inglês ===
+model_english:
+  # Vocabulário expandido para phonemes ingleses
+  vocab_size: 256 # Ajustado para phonemes ingleses
+
+  # Attention específico para inglês
+  attention_heads: 8
+  attention_dropout: 0.1
+
+  # Encoder específico
+  encoder_layers: 6
+  encoder_hidden_dim: 512
+
+  # Decoder específico
+  decoder_layers: 6
+  decoder_hidden_dim: 512
+
+# === Configuração de Instalação de Dependências ===
+dependencies:
+  # Phonemizer para G2P em inglês
+  phonemizer:
+    install: true
+    backend: "espeak"
+    language_pack: "en-us"
+
+  # Outras dependências específicas
+  nltk:
+    install: true
+    download: ["punkt", "averaged_perceptron_tagger"]
+
+  espeak:
+    install: true
+    languages: ["en-us", "en-gb"]

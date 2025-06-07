@@ -22,30 +22,58 @@ class AudioSampleGenerator:
         output_dir: str = "samples",
         sample_rate: int = 22050,
         max_length: int = 1000,  # máximo tokens de texto
+        language: str = "pt-br",  # Idioma para os textos de teste
     ):
         self.output_dir = Path(output_dir)
         self.sample_rate = sample_rate
         self.max_length = max_length
+        self.language = language.lower()
 
         # Criar diretório de saída
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Textos de teste padrão em português brasileiro
-        self.test_texts = [
-            "Olá, eu sou o sistema de síntese de voz ValeTTS.",
-            "Este é um teste de qualidade do modelo de texto para fala.",
-            "O treinamento está progredindo muito bem hoje.",
-            "Inteligência artificial e processamento de linguagem natural.",
-            "A tecnologia de síntese de voz está evoluindo rapidamente.",
-        ]
+        # Textos de teste baseados no idioma
+        if self.language in ["en", "en-us", "en-gb"]:
+            # Textos de teste em inglês
+            self.test_texts = [
+                "Hello, I am the ValeTTS text-to-speech synthesis system.",
+                "This is a quality test of the text-to-speech model.",
+                "The training is progressing very well today.",
+                "Artificial intelligence and natural language processing.",
+                "Voice synthesis technology is evolving rapidly.",
+                "The weather is beautiful today in the countryside.",
+                "Machine learning models require careful tuning.",
+                "Speech synthesis enables computers to communicate naturally.",
+            ]
+        else:
+            # Textos de teste padrão em português brasileiro
+            self.test_texts = [
+                "Olá, eu sou o sistema de síntese de voz ValeTTS.",
+                "Este é um teste de qualidade do modelo de texto para fala.",
+                "O treinamento está progredindo muito bem hoje.",
+                "Inteligência artificial e processamento de linguagem natural.",
+                "A tecnologia de síntese de voz está evoluindo rapidamente.",
+            ]
 
-        # Informações dos falantes (baseado no dataset Edge-TTS)
-        self.speakers = {
+        # Informações dos falantes - será atualizado dinamicamente
+        self.speakers = {}
+        self._default_speakers = {
             "speaker_001": "AndrewML",  # Masculino
             "speaker_002": "BrianML",  # Masculino
             "speaker_003": "AvaML",  # Feminino
             "speaker_004": "EmmaML",  # Feminino
         }
+
+    def set_speakers_from_dataset(self, speaker_ids: List[str]) -> None:
+        """Configura speakers baseado nos IDs do dataset real."""
+        self.speakers = {}
+        for i, speaker_id in enumerate(sorted(speaker_ids)):
+            # Usar nomes mais genéricos para speakers do dataset
+            self.speakers[speaker_id] = f"Speaker_{i+1:03d}"
+
+        logger.info(
+            f"🎤 Configurados {len(self.speakers)} speakers para geração de amostras"
+        )
 
     def generate_samples(
         self,
@@ -54,6 +82,7 @@ class AudioSampleGenerator:
         text_preprocessor,
         device: torch.device,
         num_samples_per_speaker: int = 1,
+        max_speakers: int = 5,  # Limitar número de speakers para não sobrecarregar
     ) -> Dict[str, Any]:
         """
         Gera amostras de áudio para todos os falantes.
@@ -64,12 +93,21 @@ class AudioSampleGenerator:
             text_preprocessor: Preprocessador de texto
             device: Device (cuda/cpu)
             num_samples_per_speaker: Quantas amostras por falante
+            max_speakers: Máximo de speakers para gerar amostras
 
         Returns:
             Dict com informações das amostras geradas
         """
         try:
             logger.info(f"🎵 Gerando amostras de áudio - Época {epoch}")
+
+            # Se não há speakers configurados, usar padrão
+            speakers_to_use = (
+                self.speakers if self.speakers else self._default_speakers
+            )
+
+            # Limitar número de speakers
+            speakers_list = list(speakers_to_use.items())[:max_speakers]
 
             # Criar diretório específico da época
             epoch_dir = self.output_dir / f"epoch_{epoch:03d}"
@@ -79,26 +117,32 @@ class AudioSampleGenerator:
             generated_samples = []
 
             with torch.no_grad():
-                for speaker_id, speaker_name in self.speakers.items():
-                    logger.info(f"   🎤 Gerando para {speaker_name} ({speaker_id})")
+                for speaker_id, speaker_name in speakers_list:
+                    logger.info(
+                        f"   🎤 Gerando para {speaker_name} ({speaker_id})"
+                    )
 
                     for i in range(num_samples_per_speaker):
                         # Selecionar texto (rodar entre os textos disponíveis)
-                        text_idx = (len(generated_samples) + i) % len(self.test_texts)
+                        text_idx = (len(generated_samples) + i) % len(
+                            self.test_texts
+                        )
                         text = self.test_texts[text_idx]
 
                         try:
                             # Gerar amostra
-                            audio_path, metadata = self._generate_single_sample(
-                                model=model,
-                                text=text,
-                                speaker_id=speaker_id,
-                                speaker_name=speaker_name,
-                                epoch=epoch,
-                                sample_idx=i,
-                                epoch_dir=epoch_dir,
-                                text_preprocessor=text_preprocessor,
-                                device=device,
+                            audio_path, metadata = (
+                                self._generate_single_sample(
+                                    model=model,
+                                    text=text,
+                                    speaker_id=speaker_id,
+                                    speaker_name=speaker_name,
+                                    epoch=epoch,
+                                    sample_idx=i,
+                                    epoch_dir=epoch_dir,
+                                    text_preprocessor=text_preprocessor,
+                                    device=device,
+                                )
                             )
 
                             if audio_path:
@@ -125,6 +169,8 @@ class AudioSampleGenerator:
                 "epoch": epoch,
                 "timestamp": datetime.now().isoformat(),
                 "total_samples": len(generated_samples),
+                "language": self.language,
+                "speakers_used": len(speakers_list),
                 "samples": generated_samples,
                 "output_directory": str(epoch_dir),
             }
@@ -134,7 +180,9 @@ class AudioSampleGenerator:
             with open(summary_path, "w", encoding="utf-8") as f:
                 json.dump(summary, f, indent=2, ensure_ascii=False)
 
-            logger.info(f"✅ Geradas {len(generated_samples)} amostras em {epoch_dir}")
+            logger.info(
+                f"✅ Geradas {len(generated_samples)} amostras em {epoch_dir}"
+            )
 
             return summary
 
@@ -162,7 +210,9 @@ class AudioSampleGenerator:
 
             # Converter para tensor
             if isinstance(text_tokens, list):
-                text_tensor = torch.LongTensor(text_tokens).unsqueeze(0).to(device)
+                text_tensor = (
+                    torch.LongTensor(text_tokens).unsqueeze(0).to(device)
+                )
             else:
                 text_tensor = (
                     text_tokens.unsqueeze(0).to(device)
@@ -183,10 +233,14 @@ class AudioSampleGenerator:
 
             # Gerar áudio
             start_time = (
-                torch.cuda.Event(enable_timing=True) if device.type == "cuda" else None
+                torch.cuda.Event(enable_timing=True)
+                if device.type == "cuda"
+                else None
             )
             end_time = (
-                torch.cuda.Event(enable_timing=True) if device.type == "cuda" else None
+                torch.cuda.Event(enable_timing=True)
+                if device.type == "cuda"
+                else None
             )
 
             if start_time:
@@ -194,7 +248,9 @@ class AudioSampleGenerator:
 
             # Inferência do modelo
             with torch.amp.autocast("cuda", enabled=True):
-                text_lengths = torch.LongTensor([text_tensor.size(1)]).to(device)
+                text_lengths = torch.LongTensor([text_tensor.size(1)]).to(
+                    device
+                )
                 audio_output = model.synthesize(
                     text=text_tensor,
                     text_lengths=text_lengths,
@@ -232,9 +288,7 @@ class AudioSampleGenerator:
             audio = audio.float()
 
             # Nome do arquivo
-            filename = (
-                f"{speaker_name.lower()}_sample{sample_idx:02d}_epoch{epoch:03d}.wav"
-            )
+            filename = f"{speaker_name.lower()}_sample{sample_idx:02d}_epoch{epoch:03d}.wav"
             audio_path = epoch_dir / filename
 
             # Salvar áudio
@@ -306,7 +360,9 @@ class AudioSampleGenerator:
                 return None
 
             # Ordenar e pegar o mais recente
-            latest_dir = max(epoch_dirs, key=lambda x: int(x.name.split("_")[1]))
+            latest_dir = max(
+                epoch_dirs, key=lambda x: int(x.name.split("_")[1])
+            )
 
             # Carregar resumo
             summary_path = latest_dir / "samples_summary.json"

@@ -1,11 +1,11 @@
 """
-Preprocessamento de texto para ValeTTS.
+Preprocessamento de texto para inglês - ValeTTS.
 
-Contém funcionalidades para:
-- Normalização de texto (números, abreviações)
-- Phonetização (grapheme-to-phoneme)
+Contém funcionalidades específicas para inglês:
+- Normalização de texto (números, abreviações em inglês)
+- Phonetização G2P para inglês
 - Tokenização e encoding
-- Suporte multilíngue básico
+- Suporte específico para inglês americano/britânico
 """
 
 import json
@@ -17,58 +17,32 @@ from typing import Dict, List, Optional, Tuple, Union
 import torch
 
 
-def create_text_preprocessor(language: str = "pt-br", **kwargs):
+class EnglishTextPreprocessor:
     """
-    Factory function para criar o preprocessador correto baseado no idioma.
-
-    Args:
-        language: Código do idioma (pt-br, en-us, etc.)
-        **kwargs: Argumentos passados para o preprocessador
-
-    Returns:
-        Instância do preprocessador apropriado
-    """
-    if language.lower() in ["en", "en-us", "en-gb", "english"]:
-        try:
-            from .text_en import EnglishTextPreprocessor
-
-            print(f"📝 Usando EnglishTextPreprocessor para idioma: {language}")
-            return EnglishTextPreprocessor(language=language, **kwargs)
-        except ImportError as e:
-            print(f"⚠️  Erro ao importar EnglishTextPreprocessor: {e}")
-            print("   Usando TextPreprocessor padrão...")
-            return TextPreprocessor(language=language, **kwargs)
-    else:
-        print(f"📝 Usando TextPreprocessor padrão para idioma: {language}")
-        return TextPreprocessor(language=language, **kwargs)
-
-
-class TextPreprocessor:
-    """
-    Preprocessador de texto para modelos TTS.
+    Preprocessador de texto específico para inglês.
 
     Normaliza texto, converte para phonemas e tokeniza
-    para uso em modelos de síntese de fala.
+    para uso em modelos TTS com datasets em inglês.
     """
 
     def __init__(
         self,
-        language: str = "pt-br",
+        language: str = "en-us",
         vocab_size: int = 512,
         pad_token: str = "<PAD>",
         unk_token: str = "<UNK>",
         sos_token: str = "<SOS>",
         eos_token: str = "<EOS>",
-        use_phonemes: bool = False,
+        use_phonemes: bool = True,
         normalize_numbers: bool = True,
         normalize_whitespace: bool = True,
         lowercase: bool = True,
     ):
         """
-        Inicializa o preprocessador de texto.
+        Inicializa o preprocessador de texto para inglês.
 
         Args:
-            language: Código do idioma (pt-br, en-us, etc.)
+            language: Código do idioma (en-us, en-gb, etc.)
             vocab_size: Tamanho do vocabulário
             pad_token: Token de padding
             unk_token: Token para palavras desconhecidas
@@ -90,14 +64,6 @@ class TextPreprocessor:
         self.normalize_whitespace = normalize_whitespace
         self.lowercase = lowercase
 
-        # Detectar se deveria usar processador específico
-        if language.lower() in ["en", "en-us", "en-gb", "english"]:
-            print(f"⚠️  AVISO: Idioma {language} detectado!")
-            print(
-                "   Recomendado usar create_text_preprocessor() em vez de TextPreprocessor()"
-            )
-            print("   Para melhor suporte a inglês.")
-
         # Tokens especiais
         self.special_tokens = [pad_token, unk_token, sos_token, eos_token]
 
@@ -115,101 +81,162 @@ class TextPreprocessor:
         self.reverse_vocab = {i: token for token, i in self.vocab.items()}
 
         if not self.use_phonemes:
-            # Caracteres básicos para português
-            basic_chars = "abcdefghijklmnopqrstuvwxyz"
-            basic_chars += "áàâãéêíóôõúç"
-            basic_chars += "0123456789"
-            basic_chars += " .,!?;:-()\"'"
-
+            # Caracteres básicos para inglês
+            basic_chars = "abcdefghijklmnopqrstuvwxyz0123456789 .,!?;:-()\"'"
             for char in basic_chars:
                 if char not in self.vocab:
                     self.vocab[char] = len(self.vocab)
                     self.reverse_vocab[len(self.reverse_vocab)] = char
         else:
-            # Phonemas básicos para português (IPA subset)
-            phonemes = [
-                "a",
-                "e",
+            # Phonemas para inglês (ARPAbet + IPA)
+            english_phonemes = [
+                # Vogais ARPAbet
+                "AA",
+                "AE",
+                "AH",
+                "AO",
+                "AW",
+                "AY",
+                "EH",
+                "ER",
+                "EY",
+                "IH",
+                "IY",
+                "OW",
+                "OY",
+                "UH",
+                "UW",
+                # Consoantes ARPAbet
+                "B",
+                "CH",
+                "D",
+                "DH",
+                "F",
+                "G",
+                "HH",
+                "JH",
+                "K",
+                "L",
+                "M",
+                "N",
+                "NG",
+                "P",
+                "R",
+                "S",
+                "SH",
+                "T",
+                "TH",
+                "V",
+                "W",
+                "Y",
+                "Z",
+                "ZH",
+                # IPA equivalentes
                 "i",
-                "o",
-                "u",
-                "ɐ",
+                "ɪ",
+                "e",
                 "ɛ",
+                "æ",
+                "ə",
+                "ʌ",
+                "ɑ",
                 "ɔ",
-                "ɨ",  # Vogais
+                "o",
+                "ʊ",
+                "u",
+                "aɪ",
+                "eɪ",
+                "ɔɪ",
+                "aʊ",
+                "oʊ",
                 "p",
                 "b",
                 "t",
                 "d",
                 "k",
-                "g",  # Plosivas
+                "g",
                 "f",
                 "v",
+                "θ",
+                "ð",
                 "s",
                 "z",
                 "ʃ",
                 "ʒ",
-                "x",  # Fricativas
+                "tʃ",
+                "dʒ",
                 "m",
                 "n",
-                "ɲ",
-                "ŋ",  # Nasais
+                "ŋ",
                 "l",
-                "ʎ",
-                "ɾ",
-                "r",  # Liquidas
+                "r",
+                "w",
                 "j",
-                "w",  # Semivogais
+                "h",
                 " ",  # Espaço
             ]
 
-            for phoneme in phonemes:
+            for phoneme in english_phonemes:
                 if phoneme not in self.vocab:
                     self.vocab[phoneme] = len(self.vocab)
                     self.reverse_vocab[len(self.reverse_vocab)] = phoneme
 
     def _setup_normalization_patterns(self):
-        """Setup dos patterns de normalização de texto."""
-        # Números por extenso (básico para português)
+        """Setup dos patterns de normalização de texto para inglês."""
+        # Números por extenso em inglês
         self.number_words = {
             "0": "zero",
-            "1": "um",
-            "2": "dois",
-            "3": "três",
-            "4": "quatro",
-            "5": "cinco",
-            "6": "seis",
-            "7": "sete",
-            "8": "oito",
-            "9": "nove",
-            "10": "dez",
-            "11": "onze",
-            "12": "doze",
-            "13": "treze",
-            "14": "quatorze",
-            "15": "quinze",
-            "16": "dezesseis",
-            "17": "dezessete",
-            "18": "dezoito",
-            "19": "dezenove",
-            "20": "vinte",
+            "1": "one",
+            "2": "two",
+            "3": "three",
+            "4": "four",
+            "5": "five",
+            "6": "six",
+            "7": "seven",
+            "8": "eight",
+            "9": "nine",
+            "10": "ten",
+            "11": "eleven",
+            "12": "twelve",
+            "13": "thirteen",
+            "14": "fourteen",
+            "15": "fifteen",
+            "16": "sixteen",
+            "17": "seventeen",
+            "18": "eighteen",
+            "19": "nineteen",
+            "20": "twenty",
+            "30": "thirty",
+            "40": "forty",
+            "50": "fifty",
+            "60": "sixty",
+            "70": "seventy",
+            "80": "eighty",
+            "90": "ninety",
         }
 
-        # Abreviações comuns
+        # Abreviações em inglês
         self.abbreviations = {
-            "dr.": "doutor",
-            "dra.": "doutora",
-            "sr.": "senhor",
-            "sra.": "senhora",
+            "dr.": "doctor",
+            "mr.": "mister",
+            "mrs.": "misses",
+            "ms.": "miss",
             "prof.": "professor",
-            "profa.": "professora",
-            "av.": "avenida",
-            "r.": "rua",
+            "ave.": "avenue",
+            "st.": "street",
+            "rd.": "road",
+            "blvd.": "boulevard",
             "etc.": "etcetera",
-            "ex.": "exemplo",
+            "vs.": "versus",
+            "e.g.": "for example",
+            "i.e.": "that is",
+            "inc.": "incorporated",
+            "ltd.": "limited",
+            "co.": "company",
+            "corp.": "corporation",
         }
 
-        # Patterns de regex
+        # Patterns regex
         self.patterns = {
             "multiple_spaces": re.compile(r"\s+"),
             "number": re.compile(r"\b\d+\b"),
@@ -220,11 +247,12 @@ class TextPreprocessor:
                 r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
             ),
             "punctuation_spaces": re.compile(r"\s*([,.!?;:])\s*"),
+            "ordinal": re.compile(r"\b(\d+)(st|nd|rd|th)\b"),
         }
 
     def normalize_text(self, text: str) -> str:
         """
-        Normaliza texto para TTS.
+        Normaliza texto para TTS em inglês.
 
         Args:
             text: Texto de entrada
@@ -238,6 +266,9 @@ class TextPreprocessor:
         # Converter para minúsculas se configurado
         if self.lowercase:
             text = text.lower()
+
+        # Normalizar números ordinais (1st -> first)
+        text = self._normalize_ordinals(text)
 
         # Normalizar números
         if self.normalize_numbers:
@@ -260,36 +291,97 @@ class TextPreprocessor:
 
         return text
 
+    def _normalize_ordinals(self, text: str) -> str:
+        """Converte números ordinais para texto."""
+        ordinal_words = {
+            "1st": "first",
+            "2nd": "second",
+            "3rd": "third",
+            "4th": "fourth",
+            "5th": "fifth",
+            "6th": "sixth",
+            "7th": "seventh",
+            "8th": "eighth",
+            "9th": "ninth",
+            "10th": "tenth",
+            "11th": "eleventh",
+            "12th": "twelfth",
+            "13th": "thirteenth",
+            "14th": "fourteenth",
+            "15th": "fifteenth",
+            "16th": "sixteenth",
+            "17th": "seventeenth",
+            "18th": "eighteenth",
+            "19th": "nineteenth",
+            "20th": "twentieth",
+            "21st": "twenty first",
+        }
+
+        def replace_ordinal(match):
+            ordinal = match.group()
+            return ordinal_words.get(ordinal, ordinal)
+
+        return self.patterns["ordinal"].sub(replace_ordinal, text)
+
     def _normalize_numbers(self, text: str) -> str:
-        """Converte números para texto."""
+        """Converte números para texto em inglês."""
 
         def replace_number(match):
             num = match.group()
             if num in self.number_words:
                 return self.number_words[num]
             elif len(num) <= 2:
-                # Números de 21-99
                 try:
                     n = int(num)
                     if 21 <= n <= 99:
                         tens = n // 10
                         ones = n % 10
                         tens_word = {
-                            2: "vinte",
-                            3: "trinta",
-                            4: "quarenta",
-                            5: "cinquenta",
-                            6: "sessenta",
-                            7: "setenta",
-                            8: "oitenta",
-                            9: "noventa",
+                            2: "twenty",
+                            3: "thirty",
+                            4: "forty",
+                            5: "fifty",
+                            6: "sixty",
+                            7: "seventy",
+                            8: "eighty",
+                            9: "ninety",
                         }[tens]
                         if ones == 0:
                             return tens_word
                         else:
                             return (
-                                f"{tens_word} e {self.number_words[str(ones)]}"
+                                f"{tens_word} {self.number_words[str(ones)]}"
                             )
+                except ValueError:
+                    pass
+            elif len(num) == 3:
+                # Centenas (100-999)
+                try:
+                    n = int(num)
+                    hundreds = n // 100
+                    remainder = n % 100
+                    result = f"{self.number_words[str(hundreds)]} hundred"
+                    if remainder > 0:
+                        if remainder < 21:
+                            result += f" {self.number_words[str(remainder)]}"
+                        else:
+                            tens = remainder // 10
+                            ones = remainder % 10
+                            tens_word = {
+                                2: "twenty",
+                                3: "thirty",
+                                4: "forty",
+                                5: "fifty",
+                                6: "sixty",
+                                7: "seventy",
+                                8: "eighty",
+                                9: "ninety",
+                            }[tens]
+                            if ones == 0:
+                                result += f" {tens_word}"
+                            else:
+                                result += f" {tens_word} {self.number_words[str(ones)]}"
+                    return result
                 except ValueError:
                     pass
             return num  # Manter número se não conseguir converter
@@ -297,7 +389,7 @@ class TextPreprocessor:
         return self.patterns["number"].sub(replace_number, text)
 
     def _expand_abbreviations(self, text: str) -> str:
-        """Expande abreviações."""
+        """Expande abreviações em inglês."""
         for abbrev, expansion in self.abbreviations.items():
             text = text.replace(abbrev, expansion)
         return text
@@ -319,48 +411,55 @@ class TextPreprocessor:
 
     def text_to_phonemes(self, text: str) -> str:
         """
-        Converte texto para phonemas (implementação básica).
+        Converte texto para phonemas (G2P para inglês).
 
         Args:
             text: Texto normalizado
 
         Returns:
-            String de phonemas
+            String de phonemes
         """
         if not self.use_phonemes:
             return text
 
-        # Implementação básica de G2P para português
-        # Em produção, usar uma biblioteca especializada como phonemizer
-        phoneme_map = {
-            "a": "a",
-            "e": "e",
-            "i": "i",
-            "o": "o",
-            "u": "u",
-            "ã": "ɐ̃",
-            "õ": "õ",
-            "é": "e",
-            "ê": "e",
-            "í": "i",
-            "ó": "o",
-            "ô": "o",
-            "ú": "u",
-            "ç": "s",
-            "lh": "ʎ",
-            "nh": "ɲ",
-            "rr": "r",
-            "ss": "s",
-            "ch": "ʃ",
-            "x": "ʃ",
-            "z": "z",
-            "j": "ʒ",
-            "g": "ʒ",
+        # Tentar usar phonemizer se disponível
+        try:
+            from phonemizer import phonemize
+
+            return phonemize(
+                text,
+                language="en-us",
+                backend="espeak",
+                strip=True,
+                preserve_punctuation=True,
+                with_stress=False,
+            )
+        except ImportError:
+            print(
+                "Warning: phonemizer não instalado. Usando mapeamento básico."
+            )
+            return self._basic_english_g2p(text)
+
+    def _basic_english_g2p(self, text: str) -> str:
+        """Mapeamento básico G2P para inglês (fallback)."""
+        # Mapeamento muito básico - em produção usar phonemizer
+        basic_map = {
+            "a": "æ",
+            "e": "ɛ",
+            "i": "ɪ",
+            "o": "ɑ",
+            "u": "ʌ",
+            "th": "θ",
+            "sh": "ʃ",
+            "ch": "tʃ",
+            "ng": "ŋ",
+            "ph": "f",
+            "gh": "f",
+            "ck": "k",
         }
 
-        # Aplicar mapeamento básico
         result = text
-        for graph, phoneme in phoneme_map.items():
+        for graph, phoneme in basic_map.items():
             result = result.replace(graph, phoneme)
 
         return result
@@ -376,13 +475,13 @@ class TextPreprocessor:
             Lista de tokens
         """
         if self.use_phonemes:
-            # Tokenizar phonemas (cada phonema é um token)
+            # Tokenizar phonemes (cada phonema é um token)
             tokens = []
             i = 0
             while i < len(text):
                 # Tentar phonemas multi-caractere primeiro
                 found = False
-                for length in [2, 1]:  # Tentar 2 chars, depois 1
+                for length in [3, 2, 1]:  # Tentar 3, 2, depois 1 char
                     if i + length <= len(text):
                         candidate = text[i : i + length]
                         if candidate in self.vocab:
@@ -466,33 +565,45 @@ class TextPreprocessor:
         padding_side: str = "right",
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Aplica padding a sequências de IDs.
+        Aplica padding às sequências.
 
         Args:
             sequences: Lista de sequências de IDs
-            max_length: Comprimento máximo (None = usar max da batch)
-            padding_side: "left" ou "right"
+            max_length: Comprimento máximo (None para usar o máximo das sequências)
+            padding_side: Lado do padding ('left' ou 'right')
 
         Returns:
-            padded_sequences: Tensor com padding [batch_size, max_length]
-            lengths: Comprimentos originais [batch_size]
+            Tuple com (sequências_padded, máscaras_atenção)
         """
-        lengths = [len(seq) for seq in sequences]
-        max_len = max_length or max(lengths)
+        if max_length is None:
+            max_length = max(len(seq) for seq in sequences)
 
-        batch_size = len(sequences)
-        padded = torch.full(
-            (batch_size, max_len), self.vocab[self.pad_token], dtype=torch.long
+        padded_sequences = []
+        attention_masks = []
+
+        for seq in sequences:
+            seq_len = len(seq)
+            pad_length = max_length - seq_len
+
+            if pad_length > 0:
+                padding = [self.vocab[self.pad_token]] * pad_length
+                if padding_side == "right":
+                    padded_seq = seq + padding
+                    attention_mask = [1] * seq_len + [0] * pad_length
+                else:
+                    padded_seq = padding + seq
+                    attention_mask = [0] * pad_length + [1] * seq_len
+            else:
+                padded_seq = seq[:max_length]
+                attention_mask = [1] * max_length
+
+            padded_sequences.append(padded_seq)
+            attention_masks.append(attention_mask)
+
+        return (
+            torch.tensor(padded_sequences, dtype=torch.long),
+            torch.tensor(attention_masks, dtype=torch.long),
         )
-
-        for i, seq in enumerate(sequences):
-            seq_len = min(len(seq), max_len)
-            if padding_side == "right":
-                padded[i, :seq_len] = torch.tensor(seq[:seq_len])
-            else:  # left
-                padded[i, max_len - seq_len :] = torch.tensor(seq[:seq_len])
-
-        return padded, torch.tensor(lengths)
 
     def build_vocab_from_texts(self, texts: List[str]):
         """

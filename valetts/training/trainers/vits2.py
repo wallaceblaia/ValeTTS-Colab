@@ -91,7 +91,9 @@ class VITS2Trainer(BaseTrainer):
         )
 
         # Calcular losses do gerador
-        gen_losses = self._calculate_generator_losses(outputs, batch, batch_idx)
+        gen_losses = self._calculate_generator_losses(
+            outputs, batch, batch_idx
+        )
 
         # Loss total do gerador
         gen_loss_total = (
@@ -170,7 +172,9 @@ class VITS2Trainer(BaseTrainer):
         min_len = min(generated_mel.size(-1), target_mel.size(-1))
         generated_mel_trimmed = generated_mel[:, :, :min_len]
         target_mel_trimmed = target_mel[:, :, :min_len]
-        losses["mel_loss"] = F.l1_loss(generated_mel_trimmed, target_mel_trimmed)
+        losses["mel_loss"] = F.l1_loss(
+            generated_mel_trimmed, target_mel_trimmed
+        )
 
         # KL Divergence Loss (VAE)
         if outputs["z_posterior_mean"] is not None:
@@ -182,12 +186,15 @@ class VITS2Trainer(BaseTrainer):
             )
             losses["kl_loss"] = kl_loss
         else:
-            losses["kl_loss"] = torch.tensor(0.0, device=generated_audio.device)
+            losses["kl_loss"] = torch.tensor(
+                0.0, device=generated_audio.device
+            )
 
         # Duration Loss (se disponível)
         if "duration_predictions" in outputs and "durations" in batch:
             duration_loss = F.l1_loss(
-                outputs["duration_predictions"].float(), batch["durations"].float()
+                outputs["duration_predictions"].float(),
+                batch["durations"].float(),
             )
             losses["duration_loss"] = duration_loss
 
@@ -202,7 +209,9 @@ class VITS2Trainer(BaseTrainer):
             if len(fake_audio.shape) == 2:
                 fake_audio = fake_audio.unsqueeze(1)  # Add channel dim
 
-            disc_gen_outputs = self.model.discriminator.generator_forward(fake_audio)
+            disc_gen_outputs = self.model.discriminator.generator_forward(
+                fake_audio
+            )
 
             # Adversarial loss (gerador quer enganar discriminador)
             losses["adv_loss"] = disc_gen_outputs["generator_adversarial_loss"]
@@ -227,22 +236,32 @@ class VITS2Trainer(BaseTrainer):
             # Feature Matching Loss
             fm_loss = 0.0
             num_features = 0
-            for real_feat_list, fake_feat_list in zip(real_features, fake_features):
+            for real_feat_list, fake_feat_list in zip(
+                real_features, fake_features
+            ):
                 # Each element is a list of features from different discriminator scales
                 if isinstance(real_feat_list, list):
-                    for real_feat, fake_feat in zip(real_feat_list, fake_feat_list):
+                    for real_feat, fake_feat in zip(
+                        real_feat_list, fake_feat_list
+                    ):
                         # Ajustar comprimentos para compatibilidade
                         min_len = min(real_feat.size(-1), fake_feat.size(-1))
                         real_feat_trim = real_feat[:, :, :min_len]
                         fake_feat_trim = fake_feat[:, :, :min_len]
-                        fm_loss += F.l1_loss(fake_feat_trim, real_feat_trim.detach())
+                        fm_loss += F.l1_loss(
+                            fake_feat_trim, real_feat_trim.detach()
+                        )
                         num_features += 1
                 else:
                     # Ajustar comprimentos para compatibilidade
-                    min_len = min(real_feat_list.size(-1), fake_feat_list.size(-1))
+                    min_len = min(
+                        real_feat_list.size(-1), fake_feat_list.size(-1)
+                    )
                     real_feat_trim = real_feat_list[:, :, :min_len]
                     fake_feat_trim = fake_feat_list[:, :, :min_len]
-                    fm_loss += F.l1_loss(fake_feat_trim, real_feat_trim.detach())
+                    fm_loss += F.l1_loss(
+                        fake_feat_trim, real_feat_trim.detach()
+                    )
                     num_features += 1
 
             losses["fm_loss"] = fm_loss / max(num_features, 1)
@@ -263,7 +282,9 @@ class VITS2Trainer(BaseTrainer):
         min_len = min(generated_mel.size(-1), target_mel.size(-1))
         generated_mel_trimmed = generated_mel[:, :, :min_len]
         target_mel_trimmed = target_mel[:, :, :min_len]
-        losses["mel_loss"] = F.l1_loss(generated_mel_trimmed, target_mel_trimmed)
+        losses["mel_loss"] = F.l1_loss(
+            generated_mel_trimmed, target_mel_trimmed
+        )
 
         # KL Divergence Loss
         if outputs["z_posterior_mean"] is not None:
@@ -275,12 +296,15 @@ class VITS2Trainer(BaseTrainer):
             )
             losses["kl_loss"] = kl_loss
         else:
-            losses["kl_loss"] = torch.tensor(0.0, device=generated_audio.device)
+            losses["kl_loss"] = torch.tensor(
+                0.0, device=generated_audio.device
+            )
 
         # Duration Loss
         if "duration_predictions" in outputs and "durations" in batch:
             duration_loss = F.l1_loss(
-                outputs["duration_predictions"].float(), batch["durations"].float()
+                outputs["duration_predictions"].float(),
+                batch["durations"].float(),
             )
             losses["duration_loss"] = duration_loss
 
@@ -404,7 +428,9 @@ class VITS2Trainer(BaseTrainer):
 
                 if new_value != old_value:
                     setattr(self, attr_name, new_value)
-                    changes.append(f"{config_key}: {old_value:.2f} → {new_value:.2f}")
+                    changes.append(
+                        f"{config_key}: {old_value:.2f} → {new_value:.2f}"
+                    )
 
         return changes
 
@@ -427,6 +453,51 @@ class VITS2Trainer(BaseTrainer):
 
     def _get_text_preprocessor(self):
         """Retorna o preprocessador de texto."""
-        from valetts.data.preprocessing.text import TextPreprocessor
+        from valetts.data.preprocessing.text import create_text_preprocessor
 
-        return TextPreprocessor(language="pt-br", vocab_size=512)
+        # Usar configuração do treinamento para determinar o idioma e preprocessador
+        data_config = self.config.get("data", {})
+        dataset_config = self.config.get("dataset_config", {})
+        expected_locale = dataset_config.get("expected_locale", "pt-br")
+
+        # Mapear locale para idioma
+        language = expected_locale if expected_locale != "en" else "en-us"
+
+        return create_text_preprocessor(language=language)
+
+    def setup_audio_sampler_for_dataset(self, train_dataset) -> None:
+        """Configura o gerador de amostras baseado no dataset."""
+        if hasattr(self, "audio_sampler") and hasattr(
+            train_dataset, "speakers"
+        ):
+            # Detectar idioma baseado na configuração
+            dataset_config = self.config.get("dataset_config", {})
+            expected_locale = dataset_config.get("expected_locale", "pt-br")
+            language = expected_locale if expected_locale != "en" else "en-us"
+
+            # Atualizar idioma do gerador de amostras
+            self.audio_sampler.language = language.lower()
+
+            # Reconfigurar textos de teste baseado no idioma
+            if language.lower() in ["en", "en-us", "en-gb"]:
+                self.audio_sampler.test_texts = [
+                    "Hello, I am the ValeTTS text-to-speech synthesis system.",
+                    "This is a quality test of the text-to-speech model.",
+                    "The training is progressing very well today.",
+                    "Artificial intelligence and natural language processing.",
+                    "Voice synthesis technology is evolving rapidly.",
+                    "The weather is beautiful today in the countryside.",
+                    "Machine learning models require careful tuning.",
+                ]
+
+            # Configurar speakers do dataset
+            self.audio_sampler.set_speakers_from_dataset(
+                train_dataset.speakers
+            )
+
+            logger.info(
+                f"🎤 Gerador de amostras configurado para idioma: {language}"
+            )
+            logger.info(
+                f"🎙️ Speakers configurados: {len(train_dataset.speakers)}"
+            )

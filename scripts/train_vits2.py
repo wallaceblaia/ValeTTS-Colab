@@ -69,7 +69,9 @@ def load_config(config_path: str) -> Dict[str, Any]:
         raise
 
 
-def create_llm_monitor_config(config: Dict[str, Any]) -> Optional[LLMMonitorConfig]:
+def create_llm_monitor_config(
+    config: Dict[str, Any],
+) -> Optional[LLMMonitorConfig]:
     """Cria configuração do monitoramento LLM."""
     llm_config = config.get("llm_monitor", {})
 
@@ -87,17 +89,24 @@ def create_llm_monitor_config(config: Dict[str, Any]) -> Optional[LLMMonitorConf
         monitor_config = LLMMonitorConfig(
             enabled=True,
             provider=llm_config.get("provider", "openrouter"),
-            model=llm_config.get("model", "anthropic/claude-3-5-sonnet-20241022"),
+            model=llm_config.get(
+                "model", "anthropic/claude-3-5-sonnet-20241022"
+            ),
             api_key_env=api_key_env,
-            base_url=llm_config.get("base_url", "https://openrouter.ai/api/v1"),
+            base_url=llm_config.get(
+                "base_url", "https://openrouter.ai/api/v1"
+            ),
             # Frequência
             monitor_every_epochs=llm_config.get("monitor_every_epochs", 5),
             monitor_every_steps=llm_config.get("monitor_every_steps"),
             # Configuração dinâmica
             dynamic_config_path=llm_config.get(
-                "dynamic_config_path", "configs/training/llm_dynamic_config.yaml"
+                "dynamic_config_path",
+                "configs/training/llm_dynamic_config.yaml",
             ),
-            backup_original_config=llm_config.get("backup_original_config", True),
+            backup_original_config=llm_config.get(
+                "backup_original_config", True
+            ),
             # Ranges seguros
             lr_min=llm_config.get("lr_min", 1e-6),
             lr_max=llm_config.get("lr_max", 1e-2),
@@ -113,11 +122,19 @@ def create_llm_monitor_config(config: Dict[str, Any]) -> Optional[LLMMonitorConf
                 "loss_weight_change_factor_max", 1.5
             ),
             # Segurança
-            require_human_approval=llm_config.get("require_human_approval", True),
-            critical_change_threshold=llm_config.get("critical_change_threshold", 0.3),
-            max_consecutive_changes=llm_config.get("max_consecutive_changes", 3),
+            require_human_approval=llm_config.get(
+                "require_human_approval", True
+            ),
+            critical_change_threshold=llm_config.get(
+                "critical_change_threshold", 0.3
+            ),
+            max_consecutive_changes=llm_config.get(
+                "max_consecutive_changes", 3
+            ),
             # Histórico
-            save_analysis_history=llm_config.get("save_analysis_history", True),
+            save_analysis_history=llm_config.get(
+                "save_analysis_history", True
+            ),
             max_history_entries=llm_config.get("max_history_entries", 50),
             include_context_epochs=llm_config.get("include_context_epochs", 3),
         )
@@ -140,7 +157,9 @@ def create_model(config: Dict[str, Any]) -> VITS2:
 
     vits2_config = VITS2Config(
         # Parâmetros do modelo
-        text_encoder_hidden_dim=model_config.get("text_encoder_hidden_dim", 192),
+        text_encoder_hidden_dim=model_config.get(
+            "text_encoder_hidden_dim", 192
+        ),
         latent_dim=model_config.get("latent_dim", 192),
         mel_channels=model_config.get("mel_channels", 80),
         n_speakers=model_config.get("n_speakers", 1),
@@ -165,6 +184,45 @@ def create_model(config: Dict[str, Any]) -> VITS2:
 def create_data_loaders(config: Dict[str, Any]) -> tuple:
     """Cria data loaders de treino e validação."""
     data_config = config["data"]
+
+    # Detectar idioma do dataset baseado na configuração ou coluna locale
+    locale_column = data_config.get("locale_column")
+    dataset_config = config.get("dataset_config", {})
+    expected_locale = dataset_config.get("expected_locale")
+
+    # Usar expected_locale se disponível, senão usar padrão
+    if expected_locale:
+        language = expected_locale
+        if expected_locale == "en":
+            language = "en-us"  # Converter para formato completo
+    else:
+        language = data_config.get("language", "pt-br")
+
+    # Configurar processador de texto baseado no idioma
+    text_processor_config = None
+    if language.lower() in ["en", "en-us", "en-gb", "english"]:
+        logger.info(f"🌍 Dataset em inglês detectado: {language}")
+        text_processor_config = {
+            "language": language,
+            "use_phonemes": data_config.get("text_processor", {}).get(
+                "use_phonemes", True
+            ),
+            "normalize_numbers": True,
+            "normalize_whitespace": True,
+            "lowercase": True,
+        }
+        logger.info(
+            "📝 Usando processamento específico para inglês com phonemes"
+        )
+    else:
+        logger.info(f"🌍 Dataset em português detectado: {language}")
+        text_processor_config = {
+            "language": language,
+            "use_phonemes": False,  # Padrão para português
+            "normalize_numbers": True,
+            "normalize_whitespace": True,
+            "lowercase": True,
+        }
 
     # Configuração de áudio para os processadores
     audio_config = {
@@ -293,10 +351,14 @@ def main():
         help="Caminho para arquivo de configuração YAML",
     )
     parser.add_argument(
-        "--resume", type=str, help="Caminho para checkpoint para resumir treinamento"
+        "--resume",
+        type=str,
+        help="Caminho para checkpoint para resumir treinamento",
     )
     parser.add_argument(
-        "--disable-llm", action="store_true", help="Desabilitar monitoramento LLM"
+        "--disable-llm",
+        action="store_true",
+        help="Desabilitar monitoramento LLM",
     )
 
     args = parser.parse_args()
@@ -323,12 +385,15 @@ def main():
         # Criar trainer
         trainer_module = VITS2Trainer(
             model=model,
-            config=config["training"],
+            config=config,  # Passar configuração completa
             llm_monitor_config=llm_monitor_config,
         )
 
         # Criar data loaders
         train_loader, val_loader = create_data_loaders(config)
+
+        # Configurar gerador de amostras baseado no dataset
+        trainer_module.setup_audio_sampler_for_dataset(train_loader.dataset)
 
         # Criar callbacks
         callbacks = create_callbacks(config)
@@ -352,10 +417,18 @@ def main():
                 "accumulate_grad_batches", 1
             ),
             gradient_clip_val=config["training"].get("gradient_clip_val", 1.0),
-            val_check_interval=config["validation"].get("val_check_interval", 1.0),
-            limit_val_batches=config["validation"].get("limit_val_batches", 1.0),
-            limit_train_batches=test_config.get("limit_train_batches", 1.0),  # 🚀 TESTE
-            num_sanity_val_steps=config["validation"].get("num_sanity_val_steps", 2),
+            val_check_interval=config["validation"].get(
+                "val_check_interval", 1.0
+            ),
+            limit_val_batches=config["validation"].get(
+                "limit_val_batches", 1.0
+            ),
+            limit_train_batches=test_config.get(
+                "limit_train_batches", 1.0
+            ),  # 🚀 TESTE
+            num_sanity_val_steps=config["validation"].get(
+                "num_sanity_val_steps", 2
+            ),
             fast_dev_run=test_config.get("fast_dev_run", False),  # 🚀 TESTE
             overfit_batches=test_config.get("overfit_batches", 0),  # 🚀 TESTE
             callbacks=callbacks,
@@ -374,8 +447,12 @@ def main():
             )
 
         if args.resume:
-            logger.info(f"📁 Resumindo treinamento do checkpoint: {args.resume}")
-            trainer.fit(trainer_module, train_loader, val_loader, ckpt_path=args.resume)
+            logger.info(
+                f"📁 Resumindo treinamento do checkpoint: {args.resume}"
+            )
+            trainer.fit(
+                trainer_module, train_loader, val_loader, ckpt_path=args.resume
+            )
         else:
             trainer.fit(trainer_module, train_loader, val_loader)
 
@@ -384,8 +461,12 @@ def main():
             stats = trainer_module.get_llm_statistics()
             if stats:
                 logger.info("📊 Estatísticas do Monitoramento LLM:")
-                logger.info(f"   • Total de análises: {stats['total_analyses']}")
-                logger.info(f"   • Sugestões aplicadas: {stats['suggestions_applied']}")
+                logger.info(
+                    f"   • Total de análises: {stats['total_analyses']}"
+                )
+                logger.info(
+                    f"   • Sugestões aplicadas: {stats['suggestions_applied']}"
+                )
                 logger.info(
                     f"   • Sugestões rejeitadas: {stats['suggestions_rejected']}"
                 )
