@@ -1,0 +1,170 @@
+# VITS2 Base Configuration
+# High-quality neural text-to-speech synthesis
+
+# Model Information
+name: "vits2_base"
+version: "2.0.0"
+
+# Audio Configuration
+sample_rate: 22050
+hop_length: 256
+win_length: 1024
+n_fft: 1024
+n_mels: 80
+f_min: 0.0
+f_max: 11025.0
+
+# Base Model Configuration
+hidden_dim: 192
+num_layers: 6
+num_heads: 2
+dropout: 0.1
+
+# Training Configuration
+learning_rate: 2.0e-4
+weight_decay: 1.0e-6
+batch_size: 16
+gradient_clip_val: 1000.0
+
+# Device Configuration
+device: "auto"
+precision: 16
+
+# Text Encoder Configuration
+text_vocab_size: 256
+text_hidden_dim: 192
+text_encoder_hidden_dim: 192
+text_encoder_layers: 6
+text_encoder_attention_heads: 2
+text_encoder_filter_size: 768
+text_filter_channels: 768
+text_num_heads: 2
+text_num_layers: 6
+text_kernel_size: 3
+text_dropout: 0.1
+max_text_length: 1000
+
+# Posterior Encoder Configuration
+posterior_in_channels: 513  # n_fft // 2 + 1
+posterior_out_channels: 192
+posterior_hidden_channels: 192
+posterior_encoder_hidden_dim: 192
+posterior_encoder_layers: 16
+posterior_kernel_size: 5
+posterior_dilation_rate: 1
+posterior_num_layers: 16
+
+# Flow Configuration
+flow_flows: 4
+flow_kernel_size: 5
+flow_base_dilation: 1
+flow_num_layers: 4
+flow_gin_channels: 256
+flow_hidden_channels: 192
+flow_dilation_rate: 1
+n_flow_blocks: 4
+n_flow_layers: 4
+latent_dim: 192
+
+# Generator Configuration
+generator_initial_channels: 512
+decoder_hidden_dim: 512
+generator_resblock_type: "1"
+generator_resblock_dilation_sizes:
+  - [1, 3, 5]
+  - [1, 3, 5]
+  - [1, 3, 5]
+generator_resblock_kernel_sizes: [3, 7, 11]
+upsample_rates: [8, 8, 2, 2]
+upsample_kernel_sizes: [16, 16, 4, 4]
+generator_upsample_rates: [8, 8, 2, 2]
+generator_upsample_initial_channel: 512
+generator_upsample_kernel_sizes: [16, 16, 4, 4]
+resblock_layers: 3
+resblock_kernel_sizes: [3, 7, 11]
+resblock_dilations: [1, 3, 5]
+
+# Multi-Scale Discriminator Configuration
+msd_use_spectral_norm: false
+msd_scale_downsample_pooling: "AvgPool1d"
+msd_scale_downsample_pooling_params:
+  kernel_size: 4
+  stride: 2
+  padding: 2
+msd_scale_discriminator_params:
+  in_channels: 1
+  out_channels: 1
+  kernel_sizes: [15, 41, 5, 3]
+  channels: 128
+  max_downsample_channels: 1024
+  max_groups: 16
+  bias: true
+  downsample_scales: [2, 2, 4, 4, 1]
+  nonlinear_activation: "LeakyReLU"
+  nonlinear_activation_params:
+    negative_slope: 0.1
+msd_scales: 3
+
+# Multi-Period Discriminator Configuration
+mpd_periods: [2, 3, 5, 7, 11]
+mpd_use_spectral_norm: false
+mpd_discriminator_params:
+  in_channels: 1
+  out_channels: 1
+  kernel_sizes: [5, 3]
+  channels: 32
+  downsample_scales: [3, 3, 3, 3, 1]
+  max_downsample_channels: 1024
+  bias: true
+  nonlinear_activation: "LeakyReLU"
+  nonlinear_activation_params:
+    negative_slope: 0.1
+  use_weight_norm: true
+  use_spectral_norm: false
+
+# Duration Predictor Configuration
+duration_predictor_kernel_size: 3
+duration_predictor_filter_size: 256
+duration_predictor_filter_channels: 256
+duration_predictor_dropout: 0.5
+
+# Stochastic Duration Predictor Configuration
+stochastic_duration_predictor_kernel_size: 3
+stochastic_duration_predictor_dropout: 0.5
+stochastic_duration_predictor_flows: 4
+stochastic_duration_predictor_dds: 4
+
+# Loss Configuration
+lambda_adv: 1.0
+lambda_mel: 45.0
+lambda_feat: 2.0
+lambda_dur: 1.0
+lambda_kl: 1.0
+adversarial_loss_weight: 1.0
+feature_matching_loss_weight: 2.0
+mel_loss_weight: 45.0
+duration_loss_weight: 1.0
+kl_loss_weight: 1.0
+
+# Speaker and Prosody Configuration
+n_speakers: 1
+speaker_embedding_dim: 256
+use_prosody_encoder: false
+prosody_dim: 128
+
+# Training Flags
+segment_size: 8192
+use_mel_loss: true
+use_kl_loss: true
+use_duration_loss: true
+use_feature_matching_loss: true
+inference_only: false
+
+# Inference Configuration
+inference_noise_scale: 0.667
+inference_noise_scale_w: 0.8
+inference_length_scale: 1.0
+
+# Paths
+checkpoint_dir: "checkpoints"
+log_dir: "logs"

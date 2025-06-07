@@ -199,7 +199,7 @@ mlruns/
 
 # Model checkpoints and weights
 checkpoints/
-models/
+# models/  # Comentado para permitir código dos modelos
 weights/
 *.bin
 *.h5
@@ -243,4 +243,4 @@ runs/
 htmlcov/
 
 # Pre-commit
-.pre-commit-config.yaml.bak 
+.pre-commit-config.yaml.bak
