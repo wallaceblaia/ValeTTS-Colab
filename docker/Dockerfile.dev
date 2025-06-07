@@ -1,0 +1,57 @@
+# Dockerfile para desenvolvimento do ValeTTS
+FROM python:3.10-slim
+
+# Argumentos de build
+ARG CUDA_VERSION=11.8
+ARG UBUNTU_VERSION=20.04
+
+# Metadados
+LABEL maintainer="Equipe ValeTTS <contato@valetts.dev>"
+LABEL description="Ambiente de desenvolvimento para ValeTTS"
+LABEL version="0.1.0"
+
+# Configurações de ambiente
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Instalar dependências do sistema
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    ffmpeg \
+    libsndfile1 \
+    libffi-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar UV
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Criar diretório de trabalho
+WORKDIR /workspace
+
+# Copiar arquivos de configuração
+COPY pyproject.toml ./
+COPY uv.lock ./
+
+# Instalar dependências
+RUN uv sync --extra dev
+
+# Copiar código fonte
+COPY . .
+
+# Instalar projeto em modo desenvolvimento
+RUN uv pip install -e .
+
+# Configurar pre-commit
+RUN uv run pre-commit install
+
+# Expor porta para Jupyter/API
+EXPOSE 8000 8888
+
+# Comando padrão
+CMD ["/bin/bash"] 

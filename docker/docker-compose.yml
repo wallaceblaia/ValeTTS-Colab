@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  # Serviço principal de desenvolvimento
+  valetts-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    image: valetts:dev
+    container_name: valetts-dev
+    volumes:
+      - ..:/workspace
+      - valetts-cache:/root/.cache
+    ports:
+      - "8000:8000"  # API
+      - "8888:8888"  # Jupyter
+      - "6006:6006"  # TensorBoard
+    environment:
+      - PYTHONPATH=/workspace
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+  # Jupyter Lab para desenvolvimento
+  jupyter:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    image: valetts:dev
+    container_name: valetts-jupyter
+    volumes:
+      - ..:/workspace
+      - valetts-cache:/root/.cache
+    ports:
+      - "8888:8888"
+    environment:
+      - PYTHONPATH=/workspace
+    command: >
+      bash -c "uv run jupyter lab 
+      --ip=0.0.0.0 
+      --port=8888 
+      --no-browser 
+      --allow-root 
+      --NotebookApp.token='' 
+      --NotebookApp.password=''"
+
+  # TensorBoard para monitoramento
+  tensorboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    image: valetts:dev
+    container_name: valetts-tensorboard
+    volumes:
+      - ..:/workspace
+      - valetts-cache:/root/.cache
+    ports:
+      - "6006:6006"
+    environment:
+      - PYTHONPATH=/workspace
+    command: >
+      bash -c "uv run tensorboard 
+      --logdir=/workspace/logs 
+      --host=0.0.0.0 
+      --port=6006"
+
+  # Redis para cache (opcional)
+  redis:
+    image: redis:7-alpine
+    container_name: valetts-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --save 20 1 --loglevel warning
+
+  # PostgreSQL para metadados (opcional)
+  postgres:
+    image: postgres:15-alpine
+    container_name: valetts-postgres
+    environment:
+      - POSTGRES_DB=valetts
+      - POSTGRES_USER=valetts
+      - POSTGRES_PASSWORD=valetts
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  valetts-cache:
+    driver: local
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+
+networks:
+  default:
+    name: valetts-network 

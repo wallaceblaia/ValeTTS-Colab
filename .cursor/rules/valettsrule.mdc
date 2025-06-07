@@ -1,0 +1,627 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# ValeTTS - Diretrizes e Padrões do Projeto
+*Regras e Guidelines para Desenvolvimento Consistente*
+
+## 🎯 Filosofia do Projeto
+
+### Princípios Fundamentais
+1. **Qualidade sobre Velocidade**: Priorizamos código robusto e testado
+2. **Modularidade**: Componentes independentes e reutilizáveis
+3. **Performance-First**: Otimização contínua para produção
+4. **Documentação Viva**: Código auto-documentado e docs atualizadas
+5. **Reprodutibilidade**: Resultados consistentes e versionamento rigoroso
+
+---
+
+## 🏗️ Arquitetura e Estruturação
+
+### Estrutura de Diretórios (OBRIGATÓRIA)
+```
+ValeTTS/
+├── README.md                    # Documentação principal
+├── CHANGELOG.md                 # Log de mudanças
+├── LICENSE                      # Licenciamento
+├── requirements.txt             # Dependencies Python
+├── requirements-dev.txt         # Dependencies de desenvolvimento
+├── setup.py                     # Instalação do pacote
+├── pyproject.toml              # Configurações do projeto
+├── .gitignore                  # Exclusões Git
+├── .pre-commit-config.yaml     # Hooks de pre-commit
+├── docker/                     # Containers Docker
+│   ├── Dockerfile.dev
+│   ├── Dockerfile.prod
+│   └── docker-compose.yml
+├── configs/                    # Configurações YAML/JSON
+│   ├── models/                 # Configs de modelos
+│   ├── training/               # Configs de treinamento
+│   └── deployment/             # Configs de deployment
+├── valetts/                    # Código fonte principal
+│   ├── __init__.py
+│   ├── models/                 # Arquiteturas de modelos
+│   │   ├── __init__.py
+│   │   ├── base/               # Modelos base
+│   │   ├── vits2/              # Implementação VITS2
+│   │   ├── meta_learning/      # MAML e few-shot
+│   │   ├── prosody/            # Controle prosódico
+│   │   └── vocoders/           # BigVGAN-v2 e outros
+│   ├── data/                   # Pipeline de dados
+│   │   ├── __init__.py
+│   │   ├── preprocessing/      # Preprocessamento
+│   │   ├── loaders/           # Data loaders
+│   │   └── augmentation/      # Data augmentation
+│   ├── training/              # Sistema de treinamento
+│   │   ├── __init__.py
+│   │   ├── trainers/          # Trainers específicos
+│   │   ├── optimizers/        # Otimizadores customizados
+│   │   └── schedulers/        # Learning rate schedulers
+│   ├── inference/             # Sistema de inferência
+│   │   ├── __init__.py
+│   │   ├── synthesizers/      # Engines de síntese
+│   │   ├── voice_cloning/     # Few-shot cloning
+│   │   └── api/               # APIs de inferência
+│   ├── evaluation/            # Métricas e avaliação
+│   │   ├── __init__.py
+│   │   ├── metrics/           # Métricas automatizadas
+│   │   └── benchmarks/        # Benchmarking tools
+│   └── utils/                 # Utilitários gerais
+│       ├── __init__.py
+│       ├── audio.py           # Processamento de áudio
+│       ├── text.py            # Processamento de texto
+│       ├── io.py              # I/O operations
+│       └── visualization.py   # Plotting e visualização
+├── scripts/                   # Scripts de uso
+│   ├── train.py               # Script de treinamento
+│   ├── inference.py           # Script de inferência
+│   ├── evaluate.py            # Script de avaliação
+│   └── deployment/            # Scripts de deployment
+├── tests/                     # Testes automatizados
+│   ├── unit/                  # Testes unitários
+│   ├── integration/           # Testes de integração
+│   ├── performance/           # Testes de performance
+│   └── fixtures/              # Dados de teste
+├── docs/                      # Documentação
+│   ├── source/                # Sphinx source
+│   ├── api/                   # API documentation
+│   └── tutorials/             # Tutoriais e exemplos
+├── examples/                  # Exemplos de uso
+│   ├── basic_synthesis/
+│   ├── voice_cloning/
+│   └── multilingual/
+└── data/                      # Dados locais (não versionados)
+    ├── raw/                   # Dados brutos
+    ├── processed/             # Dados processados
+    └── models/                # Modelos treinados
+```
+
+---
+
+## 💻 Padrões de Código
+
+### Linguagem e Versões
+- **Python**: 3.10-3.12 (obrigatório para compatibilidade PyTorch e features modernas)
+- **PyTorch**: 2.0+ (para performance otimizada)
+- **CUDA**: 11.8+ (para aceleração GPU)
+- **Package Manager**: `uv` (recomendado) ou `pip` (fallback)
+
+### Style Guide (OBRIGATÓRIO)
+```bash
+# Formatação automática
+black --line-length 88 --target-version py310
+
+# Linting
+flake8 --max-line-length=88 --extend-ignore=E203,W503
+
+# Type checking
+mypy --strict --ignore-missing-imports
+
+# Package management (recomendado)
+uv add torch>=2.0.0  # mais rápido que pip
+uv sync              # resolve conflitos automaticamente
+```
+
+### Convenções de Nomenclatura
+```python
+# Classes: PascalCase
+class VoiceCloner:
+    pass
+
+# Funções e variáveis: snake_case
+def train_model():
+    learning_rate = 1e-4
+
+# Constantes: UPPER_SNAKE_CASE
+MAX_SEQUENCE_LENGTH = 1024
+DEFAULT_SAMPLE_RATE = 22050
+
+# Arquivos: snake_case.py
+# voice_cloning.py, meta_learning.py
+
+# Diretórios: snake_case
+# data_loaders/, model_architectures/
+```
+
+### Documentação de Código (OBRIGATÓRIA)
+```python
+def synthesize_speech(
+    text: str,
+    speaker_id: Optional[str] = None,
+    language: str = "en",
+    prosody_controls: Optional[Dict[str, float]] = None
+) -> torch.Tensor:
+    """Sintetiza fala a partir de texto usando o modelo TTS.
+    
+    Args:
+        text: Texto a ser sintetizado
+        speaker_id: ID do speaker (None para speaker padrão)
+        language: Código do idioma (ISO 639-1)
+        prosody_controls: Controles prosódicos opcionais
+            - pitch_scale: Escala de pitch (0.5-2.0)
+            - speed_scale: Escala de velocidade (0.5-2.0)
+            - energy_scale: Escala de energia (0.5-2.0)
+    
+    Returns:
+        Tensor de áudio sintetizado (shape: [1, T])
+        
+    Raises:
+        ValueError: Se texto vazio ou idioma não suportado
+        RuntimeError: Se erro durante síntese
+        
+    Example:
+        >>> synthesizer = TTSSynthesizer()
+        >>> audio = synthesizer.synthesize_speech(
+        ...     "Hello world", 
+        ...     language="en",
+        ...     prosody_controls={"pitch_scale": 1.2}
+        ... )
+        >>> audio.shape
+        torch.Size([1, 44100])
+    """
+```
+
+---
+
+## 🧪 Testes e Qualidade
+
+### Estratégia de Testes (OBRIGATÓRIA)
+```python
+# Estrutura de testes
+tests/
+├── unit/                      # Testes unitários (>80% coverage)
+│   ├── test_models.py
+│   ├── test_data_processing.py
+│   └── test_utils.py
+├── integration/               # Testes de integração
+│   ├── test_training_pipeline.py
+│   ├── test_inference_pipeline.py
+│   └── test_api_endpoints.py
+├── performance/               # Testes de performance
+│   ├── test_rtf_benchmarks.py
+│   ├── test_memory_usage.py
+│   └── test_quality_metrics.py
+└── fixtures/                  # Dados de teste
+    ├── audio_samples/
+    ├── text_samples/
+    └── model_configs/
+```
+
+### Métricas de Qualidade Mínimas
+- **Cobertura de Código**: ≥80%
+- **Testes Unitários**: Todos os módulos principais
+- **Testes de Integração**: Pipelines end-to-end
+- **Performance Tests**: RTF, Memória, Qualidade
+
+### CI/CD Pipeline
+```yaml
+# .github/workflows/ci.yml
+name: CI/CD Pipeline
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install dependencies
+        run: |
+          uv sync --extra dev
+          source .venv/bin/activate
+      - name: Run linting
+        run: |
+          black --check .
+          flake8 .
+          mypy valetts/
+      - name: Run tests
+        run: pytest --cov=valetts --cov-report=xml
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+```
+
+---
+
+## 🔧 Tecnologias e Dependencies
+
+### Core Stack (OBRIGATÓRIO)
+```toml
+# pyproject.toml (recomendado com uv)
+[project]
+name = "valetts"
+version = "0.1.0"
+description = "Sistema TTS de Última Geração"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0", 
+    "pytorch-lightning>=2.0.0",
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
+    "numpy>=1.21.0",
+    "scipy>=1.9.0",
+    "matplotlib>=3.5.0",
+    "tensorboard>=2.10.0",
+    "wandb>=0.13.0",
+    "hydra-core>=1.2.0",
+    "omegaconf>=2.2.0",
+]
+
+# Ou requirements.txt (fallback)
+# torch>=2.0.0
+# torchaudio>=2.0.0
+# pytorch-lightning>=2.0.0
+# librosa>=0.10.0
+# soundfile>=0.12.0
+# numpy>=1.21.0
+# scipy>=1.9.0
+# matplotlib>=3.5.0
+# tensorboard>=2.10.0
+# wandb>=0.13.0
+# hydra-core>=1.2.0
+# omegaconf>=2.2.0
+```
+
+### Development Tools (OBRIGATÓRIO)
+```toml
+# Em pyproject.toml
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0", 
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+    "mypy>=0.991",
+    "pre-commit>=2.20.0",
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+    "jupyter>=1.0.0",
+    "ipywidgets>=8.0.0",
+]
+
+# Instalação com uv:
+# uv sync --extra dev
+```
+
+### Performance & Deployment
+```txt
+# Opcional para produção
+onnx>=1.12.0
+onnxruntime-gpu>=1.12.0
+tensorrt>=8.5.0
+triton>=2.0.0
+uvicorn>=0.18.0  # para API FastAPI
+gunicorn>=20.1.0  # para deployment
+redis>=4.3.0      # para cache
+```
+
+---
+
+## 📊 Configurações e Hyperparâmetros
+
+### Sistema de Configuração (Hydra + OmegaConf)
+```yaml
+# configs/model/vits2_base.yaml
+_target_: valetts.models.vits2.VITS2
+
+# Architecture
+hidden_channels: 192
+filter_channels: 768
+n_heads: 2
+n_layers: 6
+kernel_size: 3
+p_dropout: 0.1
+
+# Training
+learning_rate: 2e-4
+adam_b1: 0.8
+adam_b2: 0.99
+lr_decay: 0.999875
+init_lr_ratio: 1.0
+warmup_epochs: 0
+c_mel: 45
+c_kl: 1.0
+
+# Audio
+sampling_rate: 22050
+hop_length: 256
+win_length: 1024
+n_mel_channels: 80
+mel_fmin: 0.0
+mel_fmax: null
+
+# Multilingual
+num_languages: 8
+language_embedding_dim: 16
+```
+
+### Convenções de Configuração
+- **Arquivos YAML**: Para configurações legíveis
+- **Hydra decorators**: Para gestão de configurações
+- **Environment variables**: Para secrets e deployment
+- **Validation**: Pydantic models para validação
+
+### Gerenciamento de Dependências com UV
+```bash
+# Instalação do uv (uma vez)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Criação de projeto
+uv init valetts
+cd valetts
+
+# Adicionar dependências
+uv add torch>=2.0.0 torchaudio>=2.0.0
+uv add --dev pytest>=7.0.0 black>=22.0.0
+
+# Sincronizar ambiente
+uv sync                 # instala todas as deps
+uv sync --extra dev     # inclui deps de desenvolvimento
+
+# Executar comandos no ambiente
+uv run python train.py
+uv run pytest
+uv run black .
+
+# Benefícios do uv:
+# - 10-100x mais rápido que pip
+# - Resolve conflitos automaticamente  
+# - Cache global inteligente
+# - Lock file automático (uv.lock)
+# - Virtual env automático
+```
+
+---
+
+## 🚀 Performance e Otimização
+
+### Benchmarks Mínimos (OBRIGATÓRIOS)
+```python
+# Métricas de Performance Requeridas
+PERFORMANCE_REQUIREMENTS = {
+    "rtf_gpu_a100": 0.004,      # RTF ≤0.004 em A100
+    "rtf_gpu_v100": 0.010,      # RTF ≤0.010 em V100  
+    "rtf_cpu": 0.500,           # RTF ≤0.500 em CPU
+    "vram_usage_gb": 8,         # VRAM ≤8GB
+    "ram_usage_gb": 16,         # RAM ≤16GB
+    "latency_ms": 500,          # Latência ≤500ms
+    "throughput_concurrent": 10  # ≥10 sínteses simultâneas
+}
+
+# Métricas de Qualidade Requeridas
+QUALITY_REQUIREMENTS = {
+    "mos_score": 4.2,           # MOS ≥4.2
+    "speaker_similarity": 0.73, # Similaridade ≥73%
+    "pesq_score": 4.0,          # PESQ ≥4.0
+    "mcd_score": 0.30,          # MCD ≤0.30
+    "stoi_score": 0.85,         # STOI ≥0.85
+}
+```
+
+### Otimizações Obrigatórias
+1. **Mixed Precision**: PyTorch AMP para speedup 2-3x
+2. **Gradient Checkpointing**: Redução 50-80% uso de memória
+3. **Compilation**: torch.compile para PyTorch 2.0+
+4. **Distributed Training**: Multi-GPU com DeepSpeed
+5. **Model Quantization**: Para deployment eficiente
+
+---
+
+## 📚 Documentação
+
+### Documentação Obrigatória
+1. **README.md**: Overview, instalação, uso básico
+2. **API Documentation**: Docstrings + Sphinx autodoc
+3. **Tutorials**: Jupyter notebooks com exemplos
+4. **Architecture Guide**: Diagramas e explicações técnicas
+5. **Deployment Guide**: Instruções de produção
+
+### Formato de Documentação
+```python
+# Sphinx configuration
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.mathjax',
+    'myst_parser',
+]
+
+# Napoleon settings for Google-style docstrings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
+napoleon_include_init_with_doc = False
+napoleon_include_private_with_doc = False
+```
+
+---
+
+## 🔐 Segurança e Privacidade
+
+### Práticas de Segurança
+1. **Secrets Management**: Nunca commitar API keys/tokens
+2. **Input Validation**: Sanitização rigorosa de inputs
+3. **Rate Limiting**: Para APIs públicas
+4. **Logging Seguro**: Não logar dados sensíveis
+5. **Dependencies**: Auditoria regular de vulnerabilidades
+
+### Proteção de Dados
+- **Audio Data**: Anonimização quando possível
+- **Model Weights**: Versionamento seguro
+- **User Data**: Compliance com LGPD/GDPR
+- **Telemetry**: Opt-in para coleta de métricas
+
+---
+
+## 🌐 Versionamento e Release
+
+### Semantic Versioning (OBRIGATÓRIO)
+```
+MAJOR.MINOR.PATCH
+1.0.0 - Release inicial
+1.1.0 - Novas features
+1.1.1 - Bug fixes
+2.0.0 - Breaking changes
+```
+
+### Git Workflow
+```bash
+# Branch naming
+feature/nome-da-feature
+bugfix/nome-do-bug
+hotfix/nome-do-hotfix
+release/v1.2.0
+
+# Commit messages (Conventional Commits)
+feat: add voice cloning functionality
+fix: resolve memory leak in inference
+docs: update API documentation
+test: add unit tests for VITS2 model
+```
+
+### Release Process
+1. **Feature freeze** na branch develop
+2. **Testing intensivo** em branch release
+3. **Tag versioning** na branch main
+4. **Deployment automatizado** via CI/CD
+5. **Documentation update** pós-release
+
+---
+
+## 🏃‍♂️ Workflow de Desenvolvimento
+
+### Daily Workflow
+1. **Pull latest**: `git pull origin main`
+2. **Create branch**: `git checkout -b feature/my-feature`
+3. **Run tests**: `pytest` antes de commitar
+4. **Pre-commit hooks**: Automático com `pre-commit install`
+5. **Push & PR**: Code review obrigatório
+
+### Code Review Guidelines
+- **Mandatory reviews**: Mínimo 1 reviewer
+- **Automated checks**: CI deve passar
+- **Documentation**: Updates necessárias incluídas
+- **Performance**: Benchmarks não regressivos
+- **Tests**: Cobertura mantida/melhorada
+
+---
+
+## ⚡ Performance Monitoring
+
+### Métricas Contínuas
+```python
+# Logging de métricas obrigatório
+import wandb
+import tensorboard
+
+# Durante treinamento
+wandb.log({
+    "train/loss": loss.item(),
+    "train/rtf": rtf_score,
+    "train/memory_usage": torch.cuda.memory_allocated(),
+    "val/mos_score": mos_prediction,
+    "val/speaker_similarity": speaker_sim,
+})
+
+# Durante inferência
+metrics = {
+    "inference_time_ms": inference_time * 1000,
+    "gpu_utilization": gpu_util_percent,
+    "memory_peak_mb": memory_peak / 1024**2,
+    "audio_quality_score": quality_score,
+}
+```
+
+### Alertas Automáticos
+- **Performance degradation**: RTF > threshold
+- **Quality regression**: MOS drop > 0.1
+- **Memory leaks**: Crescimento contínuo de memória
+- **Error rates**: Taxa de erro > 1%
+
+---
+
+## 🎨 UI/UX Guidelines
+
+### Demo Interface Requirements
+1. **Responsiva**: Mobile-first design
+2. **Acessível**: WCAG 2.1 AA compliance
+3. **Performance**: Load time <3s
+4. **Real-time**: Feedback durante síntese
+5. **Multi-idioma**: Interface localizada
+
+### API Design Principles
+```python
+# RESTful endpoints consistentes
+POST /api/v1/synthesize
+POST /api/v1/clone-voice
+GET  /api/v1/voices
+GET  /api/v1/languages
+GET  /api/v1/health
+
+# Response format padronizado
+{
+    "success": true,
+    "data": {...},
+    "metadata": {
+        "request_id": "uuid",
+        "processing_time_ms": 234,
+        "model_version": "1.2.0"
+    },
+    "error": null
+}
+```
+
+---
+
+## 📋 Checklist de Compliance
+
+### Antes de cada Release
+- [ ] Todos os testes passando (100%)
+- [ ] Cobertura de código ≥80%
+- [ ] Documentação atualizada
+- [ ] Performance benchmarks validados
+- [ ] Security audit realizada
+- [ ] Breaking changes documentadas
+- [ ] Migration guide criado (se necessário)
+- [ ] Demo funcional atualizado
+
+### Revisão Mensal
+- [ ] Dependencies atualizadas
+- [ ] Security vulnerabilities verificadas
+- [ ] Performance metrics analisadas
+- [ ] User feedback incorporado
+- [ ] Roadmap atualizado
+
+---
+
+**Esta documentação é viva e deve ser atualizada conforme o projeto evolui. Todas as diretrizes são obrigatórias a menos que explicitamente marcadas como opcionais.**
+
+**Última atualização**: Janeiro 2025  
+**Versão das diretrizes**: 1.0.0  
+**Responsável**: Equipe ValeTTS 

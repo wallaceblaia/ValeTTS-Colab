@@ -1,0 +1,184 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "valetts"
+version = "0.1.0"
+description = "Sistema TTS de Última Geração com Arquitetura Híbrida"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10,<3.13"
+authors = [
+    { name = "Equipe ValeTTS", email = "contato@valetts.dev" },
+]
+keywords = ["tts", "speech-synthesis", "vits2", "voice-cloning", "ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11", 
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+
+dependencies = [
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "pytorch-lightning>=2.0.0",
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
+    "numpy>=1.21.0",
+    "scipy>=1.9.0",
+    "matplotlib>=3.5.0",
+    "tensorboard>=2.10.0",
+    "wandb>=0.13.0",
+    "hydra-core>=1.2.0",
+    "omegaconf>=2.2.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.18.0",
+    "pydantic>=2.0.0",
+    "einops>=0.6.0",
+    "transformers>=4.20.0",
+    "datasets>=2.10.0",
+    "accelerate>=0.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+    "mypy>=0.991",
+    "pre-commit>=2.20.0",
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+    "jupyter>=1.0.0",
+    "ipywidgets>=8.0.0",
+    "notebook>=6.5.0",
+]
+
+training = [
+    "deepspeed>=0.9.0",
+    "horovod>=0.28.0",
+    "tensorrt>=8.5.0",
+    "onnx>=1.12.0",
+    "onnxruntime-gpu>=1.12.0",
+]
+
+api = [
+    "gunicorn>=20.1.0",
+    "redis>=4.3.0",
+    "celery>=5.2.0",
+    "prometheus-client>=0.14.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/valetts/valetts"
+Documentation = "https://valetts.readthedocs.io"
+Repository = "https://github.com/valetts/valetts.git"
+"Bug Reports" = "https://github.com/valetts/valetts/issues"
+
+[project.scripts]
+valetts-train = "valetts.scripts.train:main"
+valetts-infer = "valetts.scripts.inference:main"
+valetts-eval = "valetts.scripts.evaluate:main"
+valetts-api = "valetts.api.server:main"
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "docs/source/conf.py",
+    "old",
+    "build",
+    "dist",
+    ".venv",
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "librosa.*",
+    "soundfile.*",
+    "wandb.*",
+    "tensorboard.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: marks tests that require GPU",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["valetts"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+] 

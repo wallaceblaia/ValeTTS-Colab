@@ -1,0 +1,72 @@
+# Configuração de treinamento para VITS2
+defaults:
+  - ../models/vits2_base.yaml
+
+# Training Settings
+trainer:
+  max_epochs: 1000
+  check_val_every_n_epoch: 10
+  log_every_n_steps: 100
+  enable_checkpointing: true
+  enable_progress_bar: true
+  enable_model_summary: true
+  gradient_clip_val: 1000
+  accumulate_grad_batches: 1
+  precision: 16-mixed  # Mixed precision for speedup
+  
+# Data Settings  
+data:
+  train_data_dir: "data/processed/train"
+  val_data_dir: "data/processed/val"
+  batch_size: 32
+  num_workers: 8
+  pin_memory: true
+  drop_last: true
+  
+  # Data augmentation
+  augmentation:
+    enable: true
+    pitch_shift_prob: 0.3
+    time_stretch_prob: 0.3
+    noise_injection_prob: 0.2
+    
+# Optimizer
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 2e-4
+  betas: [0.8, 0.99]
+  weight_decay: 0.01
+
+# Learning Rate Scheduler
+lr_scheduler:
+  _target_: torch.optim.lr_scheduler.ExponentialLR
+  gamma: 0.999875
+
+# Callbacks
+callbacks:
+  - _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    monitor: "val_loss"
+    mode: "min"
+    save_top_k: 3
+    filename: "vits2-{epoch:02d}-{val_loss:.3f}"
+    
+  - _target_: pytorch_lightning.callbacks.EarlyStopping
+    monitor: "val_loss" 
+    patience: 50
+    mode: "min"
+    
+  - _target_: pytorch_lightning.callbacks.LearningRateMonitor
+    logging_interval: "step"
+
+# Logging
+logger:
+  _target_: pytorch_lightning.loggers.WandbLogger
+  project: "valetts"
+  name: "vits2_base"
+  save_dir: "logs/"
+
+# Distributed Training
+distributed:
+  strategy: "ddp"
+  devices: "auto"
+  num_nodes: 1 
