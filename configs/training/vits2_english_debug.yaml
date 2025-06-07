@@ -126,3 +126,13 @@ llm_monitor:
   # Configuração de debug
   max_history: 5
   temperature: 0.1
+
+# === Configuração de Hardware ===
+hardware:
+  accelerator: "gpu"
+  devices: 1
+  precision: "16-mixed"
+  strategy: "auto"
+  sync_batchnorm: false # Desabilitado para debug
+  benchmark: false # Desabilitado para debug
+  deterministic: false
