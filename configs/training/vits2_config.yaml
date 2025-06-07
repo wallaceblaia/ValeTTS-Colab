@@ -1,0 +1,256 @@
+# Configuração de Treinamento VITS2 com Monitoramento LLM
+# Fase 4 - Sistema de Treinamento Completo
+
+# === Configuração do Modelo ===
+model:
+  name: "VITS2"
+  text_encoder_hidden_dim: 192
+  latent_dim: 192
+  mel_channels: 80
+  n_speakers: 4 # Multi-speaker (ValeTTS dataset)
+  speaker_embedding_dim: 512
+
+  # Configurações do generator (para compatibilidade)
+  generator_initial_channels: 512
+  gin_channels: 512 # Speaker embedding channels
+
+  # Configurações de inferência
+  inference_only: false
+
+# === Configuração de Treinamento ===
+training:
+  # Parâmetros básicos
+  learning_rate: 2.0e-4
+  batch_size: 16
+  max_epochs: 100
+  accumulate_grad_batches: 1
+  max_grad_norm: 1.0
+
+  # Loss weights
+  mel_loss_weight: 45.0
+  kl_loss_weight: 1.0
+  adv_loss_weight: 1.0
+  fm_loss_weight: 2.0
+  duration_loss_weight: 1.0
+
+  # Otimização avançada
+  use_amp: true # Automatic Mixed Precision
+  gradient_clip_val: 1.0
+  discriminator_update_frequency: 1
+
+  # Scheduler
+  scheduler:
+    name: "ReduceLROnPlateau"
+    mode: "min"
+    factor: 0.5
+    patience: 10
+    min_lr: 1.0e-6
+
+# === Configuração de Dados ===
+data:
+  dataset_format: "valetts"
+  data_dir: "data/generated/valetts_dataset_v1"
+  metadata_file: "data/generated/valetts_dataset_v1/metadata.json"
+
+  # Preprocessing
+  sample_rate: 22050
+  n_mels: 80
+  n_fft: 1024
+  hop_length: 256
+  win_length: 1024
+
+  # Data loading
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+
+  # Augmentation
+  use_augmentation: true
+  volume_range: [0.8, 1.2]
+  pitch_range: [-2, 2] # semitones
+
+# === Configuração do Monitoramento LLM ===
+llm_monitor:
+  # ATIVAÇÃO DO SISTEMA
+  enabled: true # 🤖 SISTEMA INOVADOR ATIVADO!
+
+  # Configuração do LLM
+  provider: "openrouter"
+  model: "anthropic/claude-3-5-sonnet-20241022"
+  api_key_env: "OPENROUTER_API_KEY"
+  base_url: "https://openrouter.ai/api/v1"
+
+  # Frequência de análise
+  monitor_every_epochs: 5 # Analisar a cada 5 épocas
+  monitor_every_steps: null
+  save_analysis_history: true
+  max_history_entries: 50
+
+  # Arquivo de configuração dinâmica
+  dynamic_config_path: "configs/training/llm_dynamic_config.yaml"
+  backup_original_config: true
+
+  # === RANGES SEGUROS ===
+  # Learning Rate
+  lr_min: 1.0e-6
+  lr_max: 1.0e-2
+  lr_change_factor_max: 2.0
+
+  # Batch Size
+  batch_size_min: 4
+  batch_size_max: 128
+  batch_size_change_factor_max: 2.0
+
+  # Loss Weights
+  loss_weight_min: 0.1
+  loss_weight_max: 50.0 # Mel loss pode ser alta no VITS2
+  loss_weight_change_factor_max: 1.5
+
+  # Scheduler
+  scheduler_warmup_min: 100
+  scheduler_warmup_max: 5000
+  scheduler_patience_min: 3
+  scheduler_patience_max: 20
+
+  # === SEGURANÇA ===
+  require_human_approval: true
+  critical_change_threshold: 0.3
+  max_consecutive_changes: 3
+
+  # === MÉTRICAS MONITORADAS ===
+  metrics_to_monitor:
+    - "train_loss_total"
+    - "train_loss_mel"
+    - "train_loss_kl"
+    - "train_loss_adv"
+    - "train_loss_fm"
+    - "train_loss_duration"
+    - "val_loss_total"
+    - "val_loss_mel"
+    - "val_loss_kl"
+    - "learning_rate"
+    - "grad_norm"
+    - "epoch_time"
+    - "memory_usage"
+
+  # === LIMITES DE ALERTA ===
+  loss_spike_threshold: 2.0
+  grad_norm_threshold: 10.0
+  memory_usage_threshold: 0.9
+
+  # Contexto histórico
+  include_context_epochs: 3
+
+# === Configuração de Logging ===
+logging:
+  # TensorBoard
+  tensorboard:
+    save_dir: "logs/tensorboard"
+    name: "vits2_llm_monitoring"
+    version: null
+
+  # Weights & Biases (opcional)
+  wandb:
+    enabled: false
+    project: "valetts-vits2"
+    name: "vits2-llm-run"
+    tags: ["vits2", "llm-monitoring", "tts"]
+
+  # Checkpoint
+  checkpoint:
+    dirpath: "checkpoints/vits2"
+    filename: "vits2-{epoch:03d}-{epoch/val_loss_total:.4f}"
+    save_top_k: 3
+    mode: "min"
+    monitor: "epoch/val_loss_total"
+    save_last: true
+    every_n_epochs: 10
+
+  # Early Stopping
+  early_stopping:
+    enabled: true
+    monitor: "epoch/val_loss_total"
+    patience: 15
+    mode: "min"
+    min_delta: 0.001
+
+# === Configuração de Hardware ===
+hardware:
+  # GPU
+  accelerator: "gpu" # "cpu", "gpu", "auto"
+  devices: 1 # Número de GPUs
+  precision: "16-mixed" # "32", "16-mixed", "bf16-mixed"
+
+  # Distributed training
+  strategy: "auto" # "ddp", "deepspeed", etc.
+  sync_batchnorm: true
+
+  # Performance
+  benchmark: true
+  deterministic: false
+
+# === Configuração de Validação ===
+validation:
+  val_check_interval: 1.0 # A cada época
+  limit_val_batches: 1.0 # Usar todos os dados de validação
+  num_sanity_val_steps: 2
+
+  # Síntese de amostras para validação
+  generate_samples: true
+  sample_every_n_epochs: 25
+  num_samples: 3
+  sample_texts:
+    [
+      "The quick brown fox jumps over the lazy dog.",
+      "Hello world, this is a test of the speech synthesis system.",
+      "ValeTTS with LLM monitoring is working perfectly!",
+    ]
+
+# === Informações do Experimento ===
+experiment:
+  name: "VITS2 com Monitoramento LLM"
+  description: |
+    Treinamento VITS2 com sistema inovador de monitoramento assistido por LLM.
+
+    Características:
+    - Claude 4 Sonnet para análise inteligente
+    - Ajustes dinâmicos de configuração
+    - Validação de segurança automática
+    - Otimização contínua do treinamento
+
+    Esta é uma funcionalidade pioneira no campo de TTS!
+
+  version: "1.0"
+  author: "Equipe ValeTTS"
+  date: "2025-01-06"
+
+  tags:
+    - "vits2"
+    - "llm-monitoring"
+    - "claude-sonnet"
+    - "automatic-optimization"
+    - "innovative-tts"
+# === INSTRUÇÕES DE USO ===
+#
+# 1. Configure a API key:
+#    export OPENROUTER_API_KEY="sua_chave_openrouter"
+#
+# 2. Prepare os dados:
+#    Baixe o LJSpeech dataset em data/LJSpeech-1.1/
+#
+# 3. Execute o treinamento:
+#    python scripts/train_vits2.py --config configs/training/vits2_config.yaml
+#
+# 4. Monitore o progresso:
+#    - TensorBoard: tensorboard --logdir logs/tensorboard
+#    - Logs LLM: acompanhe análises automáticas no console
+#    - Configurações dinâmicas: configs/training/llm_dynamic_config.yaml
+#
+# 5. O sistema LLM irá:
+#    - Analisar métricas a cada 5 épocas
+#    - Sugerir ajustes de LR, batch size, loss weights
+#    - Aplicar mudanças com validação de segurança
+#    - Detectar problemas precocemente
+#    - Otimizar treinamento automaticamente
+#
+# 🚀 Desfrute da inovação em TTS com IA!

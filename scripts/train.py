@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """
-Script principal de treinamento para ValeTTS.
+Script de treinamento para ValeTTS.
 
 Uso:
+    # Treinamento básico
     python scripts/train.py --config configs/training/vits2_training.yaml
-    
-    # Com overrides
+
+    # Com override de parâmetros
     python scripts/train.py --config configs/training/vits2_training.yaml \
-        trainer.max_epochs=500 data.batch_size=16
-        
-    # Distributed training
+        trainer.max_epochs=100 data.batch_size=16
+
+    # Treinamento distribuído
     python scripts/train.py --config configs/training/vits2_training.yaml \
-        distributed.devices=4 distributed.strategy=ddp
+        trainer.accelerator=gpu trainer.devices=2
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -26,80 +28,98 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from valetts.training.trainers import VITS2Trainer
-from valetts.data.loaders import TTSDataLoader
 
 
-@hydra.main(version_base=None, config_path="../configs/training", config_name="vits2_training")
-def main(cfg: DictConfig) -> None:
-    """Main training function."""
-    
-    # Set random seeds for reproducibility
-    pl.seed_everything(42, workers=True)
-    
-    # Initialize data loader
-    print("Initializing data loader...")
-    dataloader = TTSDataLoader(cfg.data)
-    
-    # Initialize model trainer
-    print("Initializing model trainer...")
-    trainer_module = VITS2Trainer(cfg)
-    
-    # Initialize PyTorch Lightning trainer
-    print("Setting up PyTorch Lightning trainer...")
-    
-    # Setup callbacks
-    callbacks = []
-    if "callbacks" in cfg:
-        for callback_cfg in cfg.callbacks:
-            callback = hydra.utils.instantiate(callback_cfg)
-            callbacks.append(callback)
-    
-    # Setup logger
-    logger = None
-    if "logger" in cfg:
-        logger = hydra.utils.instantiate(cfg.logger)
-    
-    # Create trainer
-    trainer = pl.Trainer(
-        max_epochs=cfg.trainer.max_epochs,
-        check_val_every_n_epoch=cfg.trainer.check_val_every_n_epoch,
-        log_every_n_steps=cfg.trainer.log_every_n_steps,
-        enable_checkpointing=cfg.trainer.enable_checkpointing,
-        enable_progress_bar=cfg.trainer.enable_progress_bar,
-        enable_model_summary=cfg.trainer.enable_model_summary,
-        gradient_clip_val=cfg.trainer.gradient_clip_val,
-        accumulate_grad_batches=cfg.trainer.accumulate_grad_batches,
-        precision=cfg.trainer.precision,
-        callbacks=callbacks,
-        logger=logger,
-        strategy=cfg.distributed.strategy if "distributed" in cfg else "auto",
-        devices=cfg.distributed.devices if "distributed" in cfg else "auto",
-        num_nodes=cfg.distributed.num_nodes if "distributed" in cfg else 1,
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="ValeTTS Training Script")
+
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Path to training configuration YAML file",
     )
-    
-    # Setup data loaders
-    train_loader = dataloader.train_dataloader()
-    val_loader = dataloader.val_dataloader()
-    
-    # Start training
-    print("Starting training...")
+
+    parser.add_argument(
+        "--resume_from_checkpoint",
+        type=str,
+        default=None,
+        help="Path to checkpoint to resume training from",
+    )
+
+    parser.add_argument(
+        "--experiment_name",
+        type=str,
+        default=None,
+        help="Experiment name for logging",
+    )
+
+    parser.add_argument(
+        "overrides",
+        nargs="*",
+        help="Config overrides (e.g., trainer.max_epochs=100)",
+    )
+
+    return parser.parse_args()
+
+
+@hydra.main(version_base=None, config_path=None)
+def train(cfg: DictConfig) -> None:
+    """Training function with Hydra configuration."""
+    print("Starting ValeTTS training...")
     print(f"Configuration:\n{OmegaConf.to_yaml(cfg)}")
-    
-    trainer.fit(
-        model=trainer_module,
-        train_dataloaders=train_loader,
-        val_dataloaders=val_loader,
-    )
-    
-    print("Training completed!")
-    
+
+    # Set random seeds for reproducibility
+    if "seed" in cfg:
+        pl.seed_everything(cfg.seed)
+
+    # Initialize trainer
+    trainer = VITS2Trainer(cfg)
+
+    # Start training
+    trainer.fit()
+
     # Save final model
-    if trainer.is_global_zero:
-        final_model_path = Path("models") / "final_model.ckpt"
-        final_model_path.parent.mkdir(exist_ok=True)
-        trainer.save_checkpoint(final_model_path)
-        print(f"Final model saved to: {final_model_path}")
+    trainer.save_model()
+
+    print("Training completed!")
+
+
+def main():
+    """Main training function."""
+    args = parse_args()
+
+    # Load configuration
+    config_path = Path(args.config)
+    if not config_path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+
+    # Set up Hydra with config file
+    with hydra.initialize_config_dir(
+        config_dir=str(config_path.parent.absolute()), version_base=None
+    ):
+        # Override config file name
+        overrides = [f"config={config_path.stem}"]
+
+        # Add command line overrides
+        if args.overrides:
+            overrides.extend(args.overrides)
+
+        # Add experiment name if provided
+        if args.experiment_name:
+            overrides.append(f"experiment_name={args.experiment_name}")
+
+        # Add checkpoint path if provided
+        if args.resume_from_checkpoint:
+            overrides.append(
+                f"trainer.resume_from_checkpoint={args.resume_from_checkpoint}"
+            )
+
+        # Compose configuration and run training
+        cfg = hydra.compose(config_name=config_path.stem, overrides=overrides)
+        train(cfg)
 
 
 if __name__ == "__main__":
-    main() 
+    main()

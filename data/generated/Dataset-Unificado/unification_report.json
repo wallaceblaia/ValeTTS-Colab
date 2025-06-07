@@ -1,0 +1,56 @@
+{
+  "creation_date": "2025-06-06T23:20:46.164442",
+  "total_records": 22910,
+  "total_speakers": 52,
+  "datasets_included": {
+    "Dataset-01": 647,
+    "Dataset-02": 1000,
+    "Dataset-03": 2098,
+    "Dataset-04": 10000,
+    "Dataset-05": 9165
+  },
+  "gender_distribution": {
+    "unknown": 9165,
+    "male": 6795,
+    "female": 6789,
+    "neutral": 161
+  },
+  "total_audio_files": 22910,
+  "failed_copies": 0,
+  "schema_columns": [
+    "audio_path",
+    "dataset_id",
+    "dataset_name",
+    "dataset_source",
+    "duration",
+    "id",
+    "language",
+    "line_number",
+    "locale",
+    "original_filename",
+    "original_id",
+    "original_speaker_id",
+    "phonemes",
+    "sample_number",
+    "speaker_gender",
+    "speaker_id",
+    "speaker_style",
+    "text",
+    "text_id",
+    "text_length",
+    "text_normalized",
+    "voice_name",
+    "word_count"
+  ],
+  "integrity_check": {
+    "csv_records": 22910,
+    "copied_files": 22910,
+    "match": true
+  },
+  "audio_duration": {
+    "total_seconds": 44102.609105,
+    "total_hours": 12.25072475138889,
+    "records_with_duration": 9165,
+    "average_duration": 4.812068642116749
+  }
+}

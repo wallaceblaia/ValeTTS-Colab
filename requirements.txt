@@ -1,0 +1,35 @@
+# Requirements para Google Colab - ValeTTS
+# Otimizado para GPU T4/P100/V100
+
+# Core ML frameworks
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+lightning>=2.0.0
+
+# Audio processing
+librosa>=0.10.0
+soundfile>=0.12.0
+phonemizer>=3.2.0
+unidecode>=1.3.0
+inflect>=6.0.0
+
+# Scientific computing
+numpy>=1.24.0
+scipy>=1.10.0
+numba>=0.57.0
+matplotlib>=3.7.0
+
+# ML utilities
+wandb>=0.15.0
+tensorboard>=2.13.0
+omegaconf>=2.3.0
+hydra-core>=1.3.0
+
+# Text processing
+regex>=2023.6.0
+g2p-en>=2.1.0
+
+# Development
+tqdm>=4.65.0
+psutil>=5.9.0

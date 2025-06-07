@@ -1,0 +1,23 @@
+{
+  "dataset_name": "Dataset-Unificado",
+  "total_csv_records": 22910,
+  "total_physical_files": 22910,
+  "total_speakers": 52,
+  "speaker_range": "speaker_001 - speaker_053",
+  "gender_distribution": {
+    "unknown": 9165,
+    "male": 6795,
+    "female": 6789,
+    "neutral": 161
+  },
+  "integrity_status": "\u2705 PERFEITA",
+  "missing_files_count": 0,
+  "orphaned_files_count": 0,
+  "datasets_included": {
+    "Dataset-04": 10000,
+    "Dataset-05": 9165,
+    "Dataset-03": 2098,
+    "Dataset-02": 1000,
+    "Dataset-01": 647
+  }
+}

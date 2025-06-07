@@ -1,0 +1,14 @@
+{
+  "calculation_date": "2025-06-06T23:32:34.989867",
+  "total_files_found": 22910,
+  "files_processed_successfully": 22910,
+  "files_failed": 0,
+  "success_rate_percent": 100.0,
+  "processing_time_minutes": 7.361793704827627,
+  "total_duration_seconds": 115816.741544,
+  "total_duration_hours": 32.17131709555556,
+  "average_duration_seconds": 5.055292079615889,
+  "min_duration_seconds": 1.021667,
+  "max_duration_seconds": 16.950583,
+  "total_duration_formatted": "32h 10m 16s"
+}

@@ -1,0 +1,139 @@
+# Configuração de Teste Rápido VITS2
+# Para verificar estabilidade antes do treinamento completo
+
+# === Configuração do Modelo (Simplificada) ===
+model:
+  name: "VITS2"
+  text_encoder_hidden_dim: 128 # Reduzido de 192
+  latent_dim: 128 # Reduzido de 192
+  mel_channels: 80
+  n_speakers: 52
+  speaker_embedding_dim: 256 # Reduzido de 512
+
+  # Configurações simplificadas
+  generator_initial_channels: 256 # Reduzido de 512
+  gin_channels: 256 # Reduzido de 512
+  inference_only: false
+
+# === Configuração de Treinamento (Conservativa) ===
+training:
+  # Parâmetros ultra-conservativos
+  learning_rate: 1.0e-5 # Muito baixo para estabilidade
+  batch_size: 4 # Muito pequeno para teste
+  max_epochs: 10 # Apenas 10 épocas para teste
+  accumulate_grad_batches: 8 # Batch efetivo = 32
+  max_grad_norm: 0.3 # Clipping agressivo
+
+  # Loss weights muito conservativos
+  mel_loss_weight: 10.0 # Reduzido
+  kl_loss_weight: 0.01 # Quase zero para evitar divergência
+  adv_loss_weight: 0.1 # Muito baixo
+  fm_loss_weight: 0.5 # Reduzido
+  duration_loss_weight: 0.5
+
+  # Otimização simplificada
+  use_amp: true
+  gradient_clip_val: 0.3
+  discriminator_update_frequency: 2 # Menos frequente
+
+  # Scheduler mais conservativo
+  scheduler:
+    name: "ReduceLROnPlateau"
+    mode: "min"
+    factor: 0.8
+    patience: 5
+    min_lr: 1.0e-7
+
+# === Configuração de Dados (Limitada) ===
+data:
+  dataset_format: "csv"
+  data_dir: "data/generated/Dataset-Unificado"
+  metadata_file: "data/generated/Dataset-Unificado/metadata.csv"
+
+  # Preprocessing padrão
+  sample_rate: 22050
+  n_mels: 80
+  n_fft: 1024
+  hop_length: 256
+  win_length: 1024
+
+  # Data loading otimizado
+  num_workers: 2 # Reduzido
+  pin_memory: true
+  persistent_workers: false # Desabilitado para teste
+
+  # Divisão para teste rápido
+  train_split: 0.001 # Apenas 0.1% dos dados (~23 amostras)
+  val_split: 0.001 # Apenas 0.1% para validação
+
+  # Sem augmentation para simplificar
+  use_augmentation: false
+
+# === Configuração do Monitoramento LLM ===
+llm_monitoring:
+  enabled: true
+  api_key_env: "OPENROUTER_API_KEY"
+  base_url: "https://openrouter.ai/api/v1"
+  model: "anthropic/claude-3.5-sonnet"
+
+  # Monitoramento a cada época para teste
+  monitor_every_epochs: 2
+  monitor_every_steps: null
+  save_analysis_history: true
+  max_history_entries: 10
+
+  # Relatórios informativos
+  generate_reports: true
+  report_every_epochs: 2
+
+  # Configurações de análise conservativas
+  analysis:
+    convergence_threshold: 0.001 # Mais rigoroso
+    stability_window: 3 # Menor janela
+    min_epochs_before_analysis: 1 # Análise imediata
+
+  # Early stopping agressivo para teste
+  early_stopping:
+    enabled: true
+    metric: "epoch/val_loss_total"
+    mode: "min"
+    patience: 3 # Menor paciência
+    min_delta: 0.01
+
+# === Configuração de Hardware ===
+hardware:
+  accelerator: "gpu"
+  devices: 1
+  precision: "16-mixed"
+  strategy: "auto"
+  benchmark: true
+  deterministic: false
+
+# === Configuração de Validação ===
+validation:
+  val_check_interval: 1.0
+  limit_val_batches: 1.0
+  num_sanity_val_steps: 1 # Reduzido
+
+# === Configuração de Checkpoints ===
+checkpoints:
+  monitor: "epoch/val_loss_total"
+  mode: "min"
+  save_top_k: 2 # Apenas 2 melhores
+  every_n_epochs: 2 # A cada 2 épocas
+  save_last: true
+
+# === Configuração de Logging ===
+logging:
+  log_every_n_steps: 5 # Log mais frequente para teste
+
+# === Geração de Amostras ===
+generate_samples: true
+sample_every_n_epochs: 2 # Amostras a cada 2 épocas
+
+# === Configuração de Teste ===
+test:
+  fast_dev_run: false
+  limit_train_batches: 0.01 # Apenas 1% dos batches para teste ultra-rápido
+  limit_val_batches: 0.01
+  overfit_batches: 0

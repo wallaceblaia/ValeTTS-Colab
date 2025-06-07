@@ -1,13 +1,9 @@
 """
-Técnicas de data augmentation para áudio e texto.
+Módulo de augmentação de dados para ValeTTS.
+
+Contém classes para augmentação de áudio e texto.
 """
 
 from valetts.data.augmentation.audio import AudioAugmentation
-from valetts.data.augmentation.text import TextAugmentation
-from valetts.data.augmentation.prosody import ProsodyAugmentation
 
-__all__ = [
-    "AudioAugmentation", 
-    "TextAugmentation",
-    "ProsodyAugmentation",
-] 
+__all__ = ["AudioAugmentation"]

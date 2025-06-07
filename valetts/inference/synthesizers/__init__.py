@@ -1,13 +1,11 @@
-"""
-Engines de síntese de fala.
-"""
+"""Synthesizers module."""
 
-from valetts.inference.synthesizers.tts import TTSSynthesizer
-from valetts.inference.synthesizers.multilingual import MultilingualSynthesizer
-from valetts.inference.synthesizers.base import BaseSynthesizer
+from .base import BaseSynthesizer
 
-__all__ = [
-    "TTSSynthesizer",
-    "MultilingualSynthesizer", 
-    "BaseSynthesizer",
-] 
+
+class TTSSynthesizer(BaseSynthesizer):
+    """TTS synthesizer placeholder."""
+    pass
+
+
+__all__ = ["BaseSynthesizer", "TTSSynthesizer"]

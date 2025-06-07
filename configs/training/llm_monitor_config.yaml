@@ -1,0 +1,86 @@
+# Configuração do Sistema de Monitoramento Assistido por LLM
+# Funcionalidade opcional e inovadora para análise inteligente do treinamento
+
+llm_monitor:
+  # === Ativar/Desativar Sistema ===
+  enabled: false # ALTERE PARA true PARA ATIVAR
+
+  # === Configuração do Provedor LLM ===
+  provider: "openrouter"
+  model: "anthropic/claude-3-5-sonnet-20241022"
+  api_key_env: "OPENROUTER_API_KEY"
+  base_url: "https://openrouter.ai/api/v1"
+
+  # === Intervalos de Monitoramento ===
+  monitor_every_epochs: 5 # Analisar a cada 5 épocas
+  monitor_every_steps: null # Ou por steps (se null, usa epochs)
+  save_analysis_history: true
+  max_history_entries: 100
+
+  # === Arquivo de Configuração Dinâmica ===
+  dynamic_config_path: "configs/training/llm_dynamic_config.yaml"
+  backup_original_config: true
+
+  # === Ranges Seguros para Learning Rate ===
+  lr_min: 1.0e-6
+  lr_max: 1.0e-2
+  lr_change_factor_max: 2.0 # Máximo 2x mudança por vez
+
+  # === Ranges Seguros para Batch Size ===
+  batch_size_min: 4
+  batch_size_max: 128
+  batch_size_change_factor_max: 2.0
+
+  # === Ranges Seguros para Loss Weights ===
+  loss_weight_min: 0.1
+  loss_weight_max: 10.0
+  loss_weight_change_factor_max: 1.5
+
+  # === Ranges Seguros para Scheduler ===
+  scheduler_warmup_min: 100
+  scheduler_warmup_max: 5000
+  scheduler_patience_min: 3
+  scheduler_patience_max: 20
+
+  # === Configuração de Segurança ===
+  require_human_approval: true # Para mudanças críticas
+  critical_change_threshold: 0.3 # 30% mudança = crítica
+  max_consecutive_changes: 3 # Máx mudanças consecutivas
+
+  # === Métricas Monitoradas ===
+  metrics_to_monitor:
+    - "train_loss_total"
+    - "train_loss_mel"
+    - "train_loss_kl"
+    - "train_loss_adv"
+    - "val_loss_total"
+    - "val_loss_mel"
+    - "learning_rate"
+    - "grad_norm"
+    - "epoch_time"
+    - "memory_usage"
+
+  # === Limites de Alerta ===
+  loss_spike_threshold: 2.0 # 2x aumento = alerta
+  grad_norm_threshold: 10.0
+  memory_usage_threshold: 0.9 # 90% da VRAM
+
+  # === Configuração de Prompt ===
+  prompt_template_path: "configs/training/llm_analysis_prompt.txt"
+  include_context_epochs: 3 # Épocas anteriores para contexto
+
+# === Exemplo de Uso ===
+#
+# 1. Configure sua OPENROUTER_API_KEY:
+#    export OPENROUTER_API_KEY="sua_chave_aqui"
+#
+# 2. Ative o sistema:
+#    llm_monitor.enabled: true
+#
+# 3. Execute treinamento normalmente:
+#    O sistema irá analisar automaticamente a cada 5 épocas
+#
+# 4. Configurações serão atualizadas dinamicamente no arquivo:
+#    configs/training/llm_dynamic_config.yaml
+#
+# 5. Monitore logs para ver análises e mudanças aplicadas

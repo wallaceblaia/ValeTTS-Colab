@@ -1,13 +1,9 @@
 """
-Data loaders para treinamento e inferência.
+Módulo de data loaders para ValeTTS.
+
+Contém classes para carregamento de datasets TTS.
 """
 
 from valetts.data.loaders.tts import TTSDataLoader
-from valetts.data.loaders.multilingual import MultilingualDataLoader
-from valetts.data.loaders.few_shot import FewShotDataLoader
 
-__all__ = [
-    "TTSDataLoader",
-    "MultilingualDataLoader",
-    "FewShotDataLoader",
-] 
+__all__ = ["TTSDataLoader"]
