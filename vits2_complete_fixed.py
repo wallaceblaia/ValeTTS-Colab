@@ -39,7 +39,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 class TextProcessor:
-    """Processador de texto simplificado e robusto."""
+    """Processador de texto robusto para português brasileiro."""
 
     def __init__(self, vocab_size: int = 256):
         self.vocab_size = vocab_size
@@ -48,16 +48,16 @@ class TextProcessor:
         self._build_vocab()
 
     def _build_vocab(self):
-        """Constrói vocabulário básico."""
+        """Constrói vocabulário básico para português brasileiro."""
         # Caracteres especiais
         special_chars = ["<pad>", "<unk>", "<start>", "<end>"]
 
-        # Caracteres básicos português
+        # Caracteres do português brasileiro
         chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
         chars += "áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ"
         chars += "0123456789 .,!?;:-()[]\"'`"
 
-        # Construir mapeamentos
+        # Construir mapeamentos caractere-ID
         all_chars = special_chars + list(set(chars))
 
         for i, char in enumerate(all_chars[: self.vocab_size]):
@@ -93,7 +93,7 @@ class TextProcessor:
 
 
 class AudioDataset(Dataset):
-    """Dataset para áudio e texto."""
+    """Dataset para áudio e texto em português brasileiro."""
 
     def __init__(
         self, metadata_path: str, audio_dir: str, sample_rate: int = 22050
@@ -131,11 +131,11 @@ class AudioDataset(Dataset):
 
         synthetic_samples = []
         texts = [
-            "Olá, este é um teste de síntese de fala.",
-            "O treinamento está funcionando corretamente.",
-            "Inteligência artificial é fascinante.",
-            "Vamos treinar um modelo de voz.",
-            "Este é o sistema ValeTTS.",
+            "Olá, este é um teste de síntese de fala em português brasileiro.",
+            "O treinamento do modelo VITS2 está funcionando corretamente.",
+            "Inteligência artificial e síntese de fala são fascinantes.",
+            "Vamos treinar um modelo de voz para o português do Brasil.",
+            "Este é o sistema ValeTTS para síntese de fala brasileira.",
         ]
 
         for i, text in enumerate(
