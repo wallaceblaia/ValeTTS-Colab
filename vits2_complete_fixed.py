@@ -39,7 +39,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 class TextProcessor:
-    """Processador de texto robusto para português brasileiro."""
+    """Processador de texto robusto para inglês."""
 
     def __init__(self, vocab_size: int = 256):
         self.vocab_size = vocab_size
@@ -48,13 +48,12 @@ class TextProcessor:
         self._build_vocab()
 
     def _build_vocab(self):
-        """Constrói vocabulário básico para português brasileiro."""
+        """Constrói vocabulário básico para inglês."""
         # Caracteres especiais
         special_chars = ["<pad>", "<unk>", "<start>", "<end>"]
 
-        # Caracteres do português brasileiro
+        # Caracteres básicos do inglês
         chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        chars += "áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ"
         chars += "0123456789 .,!?;:-()[]\"'`"
 
         # Construir mapeamentos caractere-ID
@@ -93,7 +92,7 @@ class TextProcessor:
 
 
 class AudioDataset(Dataset):
-    """Dataset para áudio e texto em português brasileiro."""
+    """Dataset para áudio e texto em inglês."""
 
     def __init__(
         self, metadata_path: str, audio_dir: str, sample_rate: int = 22050
@@ -131,11 +130,11 @@ class AudioDataset(Dataset):
 
         synthetic_samples = []
         texts = [
-            "Olá, este é um teste de síntese de fala em português brasileiro.",
-            "O treinamento do modelo VITS2 está funcionando corretamente.",
-            "Inteligência artificial e síntese de fala são fascinantes.",
-            "Vamos treinar um modelo de voz para o português do Brasil.",
-            "Este é o sistema ValeTTS para síntese de fala brasileira.",
+            "Hello, this is a test of speech synthesis.",
+            "The VITS2 model training is working correctly.",
+            "Artificial intelligence and speech synthesis are fascinating.",
+            "Let's train a voice model for English speech.",
+            "This is the ValeTTS system for English speech synthesis.",
         ]
 
         for i, text in enumerate(
