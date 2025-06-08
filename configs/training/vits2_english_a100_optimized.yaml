@@ -1,0 +1,196 @@
+# === CONFIGURAÇÃO OTIMIZADA VITS2 INGLÊS PARA A100 ===
+# Performance máxima: A100 40GB VRAM
+# Dataset: 22.910 amostras em inglês
+# Objetivo: 5-8 it/s para treinamento eficiente
+
+# === Configuração do Modelo (Otimizada A100) ===
+model:
+  name: "VITS2"
+  text_encoder_hidden_dim: 512  # Aumentado para A100
+  latent_dim: 512               # Aumentado para A100
+  mel_channels: 80
+  n_speakers: 52                # Total de falantes no dataset
+  speaker_embedding_dim: 1024   # Aumentado para A100 (igual ao generator)
+  
+  # Configurações específicas para inglês
+  text_processor: "english"
+  
+  # Configurações do generator (A100 otimizado)
+  generator_initial_channels: 1024  # Aumentado para A100
+  gin_channels: 1024               # Igual ao speaker_embedding_dim
+  decoder_hidden_dim: 1024         # Igual ao generator_initial_channels
+  
+  # Configurações de inferência
+  inference_only: false
+
+# === Configuração de Treinamento (A100 Otimizado) ===
+training:
+  # Parâmetros otimizados para A100 40GB
+  learning_rate: 2.0e-4
+  batch_size: 32                   # Otimizado para A100 40GB
+  max_epochs: 200
+  accumulate_grad_batches: 1       # A100 não precisa de acumulação
+  max_grad_norm: 1.0
+  
+  # Loss weights balanceados para inglês
+  mel_loss_weight: 45.0
+  kl_loss_weight: 1.0
+  adv_loss_weight: 1.0
+  fm_loss_weight: 2.0
+  duration_loss_weight: 1.0
+  
+  # Otimização avançada para A100
+  use_amp: true                    # Mixed precision essential
+  gradient_clip_val: 1.0
+  discriminator_update_frequency: 1
+  
+  # Scheduler otimizado para A100
+  scheduler:
+    name: "ReduceLROnPlateau"
+    mode: "min"
+    factor: 0.5
+    patience: 15
+    min_lr: 1.0e-6
+
+# === Configuração de Dados (Inglês Específico) ===
+data:
+  dataset_format: "valetts"
+  data_dir: "data/generated/Dataset-Unificado"
+  metadata_file: "data/generated/Dataset-Unificado/metadata.csv"
+  
+  # Configuração de idioma inglês
+  language: "en"                   # Usar coluna locale = "en"
+  locale_column: "locale"
+  
+  # Configuração do processador de texto para inglês
+  text_processor:
+    class: "EnglishTextPreprocessor"
+    use_phonemes: true
+    normalize_numbers: true
+    normalize_whitespace: true
+    lowercase: true
+    backend: "espeak"
+    language: "en-us"
+  
+  # Preprocessing de áudio
+  sample_rate: 22050
+  n_mels: 80
+  n_fft: 1024
+  hop_length: 256
+  win_length: 1024
+  
+  # Data loading otimizado para A100
+  num_workers: 12                  # Aumentado para A100
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 4               # Otimização para A100
+  
+  # Augmentation para inglês
+  use_augmentation: true
+  volume_range: [0.9, 1.1]
+  pitch_range: [-1, 1]
+  
+  # Filtros de qualidade para inglês
+  min_duration: 0.5
+  max_duration: 15.0
+  min_text_length: 10
+  max_text_length: 300
+
+# === Configuração de Logging ===
+logging:
+  log_dir: "logs"
+  experiment_name: "vits2_english_a100"
+  
+  checkpoint:
+    dirpath: "checkpoints/vits2_english_a100"
+    filename: "vits2_en_a100-{epoch:03d}-{epoch/val_loss_total:.3f}"
+    monitor: "epoch/val_loss_total"
+    mode: "min"
+    save_top_k: 5
+    save_last: true
+    every_n_epochs: 10
+  
+  early_stopping:
+    monitor: "epoch/val_loss_total"
+    mode: "min"
+    patience: 30
+    min_delta: 0.001
+  
+  tensorboard:
+    save_dir: "logs/tensorboard"
+    name: "vits2_english_a100"
+
+# === Configuração de Hardware (A100 Específico) ===
+hardware:
+  accelerator: "gpu"
+  devices: 1
+  precision: "16-mixed"            # Essential para A100
+  strategy: "auto"
+  sync_batchnorm: true
+  benchmark: true                  # Otimização para A100
+  deterministic: false             # Performance over determinism
+
+# === Configuração de Validação ===
+validation:
+  val_check_interval: 1.0
+  generate_samples: true
+  sample_every_n_epochs: 10
+  limit_val_batches: 1.0
+  num_sanity_val_steps: 2
+
+# === Configuração do Dataset Inglês ===
+dataset_config:
+  # Mapeamento de colunas correto
+  audio_column: "audio_path"
+  text_column: "text_normalized"
+  speaker_column: "speaker_id"
+  duration_column: "duration"
+  locale_column: "locale"
+  
+  # Validação específica para inglês
+  expected_locale: "en"            # Valor na coluna locale
+  validate_files: true
+  cache_preprocessing: true
+  
+  # Filtros para dataset inglês
+  required_columns: ["audio_path", "text_normalized", "speaker_id", "locale"]
+  validate_phonemes: true
+
+# === Configurações de Processamento Específicas ===
+preprocessing:
+  # Text normalization para inglês
+  expand_abbreviations: true
+  normalize_numbers: true
+  convert_ordinals: true
+  expand_contractions: true
+  
+  # Phoneme processing
+  use_phonemes: true
+  phoneme_separator: " "
+  handle_oov_words: true
+  
+  # Audio processing
+  normalize_audio: true
+  trim_silence: true
+  target_db: -23.0
+
+# === Monitor LLM (Opcional) ===
+llm_monitor:
+  enabled: false                   # Desabilitado para máxima performance
+  
+# === Configurações de Performance A100 ===
+performance:
+  # Otimizações específicas para A100
+  use_tensor_cores: true
+  optimized_attention: true
+  memory_efficient: false          # A100 tem VRAM suficiente
+  gradient_checkpointing: false    # Desnecessário com 40GB
+  
+  # Batch size dinâmico baseado na VRAM
+  adaptive_batch_size: true
+  max_batch_size: 48               # Limite seguro para A100
+  min_batch_size: 24               # Mínimo eficiente
+  
+  # Compilação do modelo (PyTorch 2.0+)
+  compile_model: true
+  compile_mode: "default"
