@@ -6,20 +6,20 @@
 # === Configuração do Modelo (Otimizada A100) ===
 model:
   name: "VITS2"
-  text_encoder_hidden_dim: 512  # Aumentado para A100
-  latent_dim: 512               # Aumentado para A100
+  text_encoder_hidden_dim: 512 # Aumentado para A100
+  latent_dim: 512 # Aumentado para A100
   mel_channels: 80
-  n_speakers: 52                # Total de falantes no dataset
-  speaker_embedding_dim: 1024   # Aumentado para A100 (igual ao generator)
-  
+  n_speakers: 52 # Total de falantes no dataset
+  speaker_embedding_dim: 1024 # Aumentado para A100 (igual ao generator)
+
   # Configurações específicas para inglês
   text_processor: "english"
-  
+
   # Configurações do generator (A100 otimizado)
-  generator_initial_channels: 1024  # Aumentado para A100
-  gin_channels: 1024               # Igual ao speaker_embedding_dim
-  decoder_hidden_dim: 1024         # Igual ao generator_initial_channels
-  
+  generator_initial_channels: 1024 # Aumentado para A100
+  flow_gin_channels: 1024 # Parâmetro correto para flow
+  decoder_hidden_dim: 1024 # Igual ao generator_initial_channels
+
   # Configurações de inferência
   inference_only: false
 
@@ -27,23 +27,23 @@ model:
 training:
   # Parâmetros otimizados para A100 40GB
   learning_rate: 2.0e-4
-  batch_size: 32                   # Otimizado para A100 40GB
+  batch_size: 32 # Otimizado para A100 40GB
   max_epochs: 200
-  accumulate_grad_batches: 1       # A100 não precisa de acumulação
+  accumulate_grad_batches: 1 # A100 não precisa de acumulação
   max_grad_norm: 1.0
-  
+
   # Loss weights balanceados para inglês
   mel_loss_weight: 45.0
   kl_loss_weight: 1.0
   adv_loss_weight: 1.0
   fm_loss_weight: 2.0
   duration_loss_weight: 1.0
-  
+
   # Otimização avançada para A100
-  use_amp: true                    # Mixed precision essential
+  use_amp: true # Mixed precision essential
   gradient_clip_val: 1.0
   discriminator_update_frequency: 1
-  
+
   # Scheduler otimizado para A100
   scheduler:
     name: "ReduceLROnPlateau"
@@ -55,41 +55,39 @@ training:
 # === Configuração de Dados (Inglês Específico) ===
 data:
   dataset_format: "valetts"
-  data_dir: "data/generated/Dataset-Unificado"
-  metadata_file: "data/generated/Dataset-Unificado/metadata.csv"
-  
+  data_dir: "/content/dataset/Dataset-Unificado"
+  metadata_file: "/content/dataset/Dataset-Unificado/metadata.csv"
+
   # Configuração de idioma inglês
-  language: "en"                   # Usar coluna locale = "en"
+  language: "en" # Usar coluna locale = "en"
   locale_column: "locale"
-  
+
   # Configuração do processador de texto para inglês
   text_processor:
-    class: "EnglishTextPreprocessor"
     use_phonemes: true
     normalize_numbers: true
     normalize_whitespace: true
     lowercase: true
-    backend: "espeak"
     language: "en-us"
-  
+
   # Preprocessing de áudio
   sample_rate: 22050
   n_mels: 80
   n_fft: 1024
   hop_length: 256
   win_length: 1024
-  
+
   # Data loading otimizado para A100
-  num_workers: 12                  # Aumentado para A100
+  num_workers: 12 # Aumentado para A100
   pin_memory: true
   persistent_workers: true
-  prefetch_factor: 4               # Otimização para A100
-  
+  prefetch_factor: 4 # Otimização para A100
+
   # Augmentation para inglês
   use_augmentation: true
   volume_range: [0.9, 1.1]
   pitch_range: [-1, 1]
-  
+
   # Filtros de qualidade para inglês
   min_duration: 0.5
   max_duration: 15.0
@@ -100,7 +98,7 @@ data:
 logging:
   log_dir: "logs"
   experiment_name: "vits2_english_a100"
-  
+
   # SISTEMA HÍBRIDO DE CHECKPOINTS
   checkpoint:
     # Checkpoints principais (2 últimos - se sobrescrevem)
@@ -108,28 +106,28 @@ logging:
     filename: "vits2_en_a100-{epoch:03d}-{epoch/val_loss_total:.3f}"
     monitor: "epoch/val_loss_total"
     mode: "min"
-    save_top_k: 2  # Apenas 2 checkpoints recentes
+    save_top_k: 2 # Apenas 2 checkpoints recentes
     save_last: true
-    every_n_epochs: 1  # Salvar a cada época
+    every_n_epochs: 1 # Salvar a cada época
     auto_insert_metric_name: false
     save_on_train_epoch_end: true
-  
+
   # Checkpoints de backup (a cada 10 épocas - permanentes)
   checkpoint_backup:
     enabled: true
     dirpath: "checkpoints/vits2_english_a100/backup"
     filename: "vits2_en_a100_backup-{epoch:03d}-{epoch/val_loss_total:.3f}"
-    every_n_epochs: 10  # Backup a cada 10 épocas
-    save_top_k: -1  # Salvar todos os backups (nunca sobrescrever)
+    every_n_epochs: 10 # Backup a cada 10 épocas
+    save_top_k: -1 # Salvar todos os backups (nunca sobrescrever)
     monitor: "epoch/val_loss_total"
     mode: "min"
-  
+
   early_stopping:
     monitor: "epoch/val_loss_total"
     mode: "min"
     patience: 30
     min_delta: 0.001
-  
+
   tensorboard:
     save_dir: "logs/tensorboard"
     name: "vits2_english_a100"
@@ -138,17 +136,17 @@ logging:
 hardware:
   accelerator: "gpu"
   devices: 1
-  precision: "16-mixed"            # Essential para A100
+  precision: "16-mixed" # Essential para A100
   strategy: "auto"
   sync_batchnorm: true
-  benchmark: true                  # Otimização para A100
-  deterministic: false             # Performance over determinism
+  benchmark: true # Otimização para A100
+  deterministic: false # Performance over determinism
 
 # === Configuração de Validação ===
 validation:
   val_check_interval: 1.0
   generate_samples: true
-  sample_every_n_epochs: 1  # Gerar amostras a cada época
+  sample_every_n_epochs: 1 # Gerar amostras a cada época
   limit_val_batches: 1.0
   num_sanity_val_steps: 2
 
@@ -160,12 +158,12 @@ dataset_config:
   speaker_column: "speaker_id"
   duration_column: "duration"
   locale_column: "locale"
-  
+
   # Validação específica para inglês
-  expected_locale: "en"            # Valor na coluna locale
+  expected_locale: "en" # Valor na coluna locale
   validate_files: true
   cache_preprocessing: true
-  
+
   # Filtros para dataset inglês
   required_columns: ["audio_path", "text_normalized", "speaker_id", "locale"]
   validate_phonemes: true
@@ -177,12 +175,12 @@ preprocessing:
   normalize_numbers: true
   convert_ordinals: true
   expand_contractions: true
-  
+
   # Phoneme processing
   use_phonemes: true
   phoneme_separator: " "
   handle_oov_words: true
-  
+
   # Audio processing
   normalize_audio: true
   trim_silence: true
@@ -190,21 +188,21 @@ preprocessing:
 
 # === Monitor LLM (Opcional) ===
 llm_monitor:
-  enabled: false                   # Desabilitado para máxima performance
-  
+  enabled: false # Desabilitado para máxima performance
+
 # === Configurações de Performance A100 ===
 performance:
   # Otimizações específicas para A100
   use_tensor_cores: true
   optimized_attention: true
-  memory_efficient: false          # A100 tem VRAM suficiente
-  gradient_checkpointing: false    # Desnecessário com 40GB
-  
+  memory_efficient: false # A100 tem VRAM suficiente
+  gradient_checkpointing: false # Desnecessário com 40GB
+
   # Batch size dinâmico baseado na VRAM
   adaptive_batch_size: true
-  max_batch_size: 48               # Limite seguro para A100
-  min_batch_size: 24               # Mínimo eficiente
-  
+  max_batch_size: 48 # Limite seguro para A100
+  min_batch_size: 24 # Mínimo eficiente
+
   # Compilação do modelo (PyTorch 2.0+)
   compile_model: true
   compile_mode: "default"
@@ -212,9 +210,9 @@ performance:
 # === Configuração de Amostras de Áudio ===
 audio_sampling:
   enabled: true
-  sample_every_n_epochs: 1         # Gerar amostras a cada época
-  num_samples: 3                   # 3 amostras por checkpoint
-  max_length: 10.0                 # Máximo 10 segundos
+  sample_every_n_epochs: 1 # Gerar amostras a cada época
+  num_samples: 3 # 3 amostras por checkpoint
+  max_length: 10.0 # Máximo 10 segundos
   sample_rate: 22050
   save_dir: "samples"
-  speakers_to_sample: [0, 1, 2]    # Primeiros 3 speakers
+  speakers_to_sample: [0, 1, 2] # Primeiros 3 speakers
