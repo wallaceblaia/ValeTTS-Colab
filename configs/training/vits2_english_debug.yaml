@@ -8,14 +8,15 @@ model:
   latent_dim: 128 # Reduzido de 192
   mel_channels: 80
   n_speakers: 52 # Ajustar conforme número de falantes no dataset
-  speaker_embedding_dim: 256 # Reduzido de 512
+  speaker_embedding_dim: 256 # Deve ser igual ao generator_initial_channels
 
   # Configurações específicas para inglês
   text_processor: "english"
 
-  # Configurações do generator (reduzidas)
+  # Configurações do generator (reduzidas mas compatíveis)
   generator_initial_channels: 256 # Reduzido de 512
-  gin_channels: 256 # Reduzido de 512
+  gin_channels: 256 # Reduzido de 512, deve ser igual ao speaker_embedding_dim
+  decoder_hidden_dim: 256 # Deve ser igual ao generator_initial_channels
 
   # Configurações de inferência
   inference_only: false
@@ -59,7 +60,7 @@ logging:
 
   # Early stopping para debug (desabilitado)
   early_stopping:
-    monitor: "val_loss"
+    monitor: "epoch/val_loss_total"
     mode: "min"
     patience: 10
     min_delta: 0.001

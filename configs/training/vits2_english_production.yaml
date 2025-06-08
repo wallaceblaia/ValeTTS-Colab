@@ -1,0 +1,139 @@
+# === Configuração de Produção VITS2 English ===
+# Baseada na configuração debug que funciona
+# Dataset completo: 22.910 amostras, treinamento robusto
+
+# === Configuração do Modelo ===
+model:
+  name: "VITS2"
+  text_encoder_hidden_dim: 192 # Restaurado para produção
+  latent_dim: 192 # Restaurado para produção
+  mel_channels: 80
+  n_speakers: 52 # Total de falantes no dataset
+  speaker_embedding_dim: 512 # Aumentado para produção
+
+  # Configurações específicas para inglês
+  text_processor: "english"
+
+  # Configurações do generator (produção otimizada)
+  generator_initial_channels: 512 # Produção completa
+  gin_channels: 512 # Igual ao speaker_embedding_dim
+  decoder_hidden_dim: 512 # Igual ao generator_initial_channels
+
+  # Configurações de inferência
+  inference_only: false
+
+# === Configuração de Treinamento ===
+training:
+  # Parâmetros básicos
+  learning_rate: 2.0e-4
+  batch_size: 16 # Otimizado para RTX 4090
+  max_epochs: 200 # Treinamento completo
+  accumulate_grad_batches: 1
+  max_grad_norm: 1.0
+
+  # Loss weights otimizados
+  mel_loss_weight: 45.0
+  kl_loss_weight: 1.0
+  adv_loss_weight: 1.0
+  fm_loss_weight: 2.0
+  duration_loss_weight: 1.0
+
+  # Otimização avançada
+  use_amp: true
+  gradient_clip_val: 1.0
+  discriminator_update_frequency: 1
+
+  # Scheduler otimizado
+  scheduler:
+    name: "ReduceLROnPlateau"
+    mode: "min"
+    factor: 0.5
+    patience: 15 # Mais paciência para produção
+    min_lr: 1.0e-6
+
+# === Configuração de Dados ===
+data:
+  dataset_format: "valetts"
+  data_dir: "data/generated/Dataset-Unificado"
+  metadata_file: "data/generated/Dataset-Unificado/metadata.csv"
+
+  # Dataset completo (sem limitação debug)
+  # max_samples_debug: removido para produção
+
+  # Configuração de idioma
+  language: "en-us"
+  locale_column: "locale"
+
+  # Configuração do processador de texto
+  text_processor:
+    use_phonemes: true
+    normalize_numbers: true
+    normalize_whitespace: true
+    lowercase: true
+
+  # Preprocessing de áudio
+  sample_rate: 22050
+  n_mels: 80
+  n_fft: 1024
+  hop_length: 256
+  win_length: 1024
+
+  # Data loading otimizado
+  num_workers: 8 # Mais workers para produção
+  pin_memory: true
+  persistent_workers: true
+
+  # Augmentation para produção
+  use_augmentation: true
+  volume_range: [0.9, 1.1] # Augmentation mais sutil
+  pitch_range: [-1, 1] # Pitch shifts menores
+
+# === Configuração de Logging ===
+logging:
+  log_dir: "logs"
+  experiment_name: "vits2_english_production"
+
+  checkpoint:
+    dirpath: "checkpoints/vits2_english_production"
+    filename: "vits2_english_prod-{epoch:03d}-{epoch/val_loss_total:.3f}"
+    monitor: "epoch/val_loss_total"
+    mode: "min"
+    save_top_k: 5 # Manter mais checkpoints
+    save_last: true
+    every_n_epochs: 10 # Salvar a cada 10 épocas
+
+  # Early stopping para produção
+  early_stopping:
+    monitor: "epoch/val_loss_total"
+    mode: "min"
+    patience: 30 # Mais paciência para convergência
+    min_delta: 0.001
+
+  tensorboard:
+    save_dir: "logs/tensorboard"
+    name: "vits2_english_production"
+
+# === Configuração de Hardware ===
+hardware:
+  accelerator: "gpu"
+  devices: 1
+  precision: "16-mixed"
+  strategy: "auto"
+
+# === Configuração de Validação ===
+validation:
+  val_check_interval: 1.0
+  generate_samples: true
+  sample_every_n_epochs: 10 # Gerar amostras a cada 10 épocas
+  limit_val_batches: 1.0
+
+# === Configuração do Dataset ===
+dataset_config:
+  expected_locale: "en"
+  validate_files: true
+  cache_preprocessing: true
+
+# === Configuração do Monitoramento LLM ===
+llm_monitor:
+  enabled: false # Desabilitado para produção focada
+  # Pode ser habilitado posteriormente se necessário

@@ -165,6 +165,11 @@ def create_model(config: Dict[str, Any]) -> VITS2:
         n_speakers=model_config.get("n_speakers", 1),
         speaker_embedding_dim=model_config.get("speaker_embedding_dim", 256),
         inference_only=model_config.get("inference_only", False),
+        # Parâmetros do generator
+        generator_initial_channels=model_config.get(
+            "generator_initial_channels", 512
+        ),
+        decoder_hidden_dim=model_config.get("decoder_hidden_dim", 512),
         # Parâmetros de áudio
         sample_rate=data_config.get("sample_rate", 22050),
         n_mels=data_config.get("n_mels", 80),

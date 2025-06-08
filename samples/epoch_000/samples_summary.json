@@ -1,0 +1,100 @@
+{
+  "epoch": 0,
+  "timestamp": "2025-06-07T16:53:29.916136",
+  "total_samples": 5,
+  "language": "en-us",
+  "speakers_used": 5,
+  "samples": [
+    {
+      "speaker_id": "speaker_001",
+      "speaker_name": "Speaker_001",
+      "text": "Hello, I am the ValeTTS text-to-speech synthesis system.",
+      "audio_path": "samples/epoch_000/speaker_001_sample00_epoch000.wav",
+      "metadata": {
+        "text": "Hello, I am the ValeTTS text-to-speech synthesis system.",
+        "speaker_id": "speaker_001",
+        "speaker_name": "Speaker_001",
+        "epoch": 0,
+        "sample_idx": 0,
+        "audio_length_seconds": 0.6385487528344671,
+        "inference_time_seconds": 0.05469868850708008,
+        "sample_rate": 22050,
+        "text_length": 56,
+        "audio_samples": 14080
+      }
+    },
+    {
+      "speaker_id": "speaker_005",
+      "speaker_name": "Speaker_002",
+      "text": "This is a quality test of the text-to-speech model.",
+      "audio_path": "samples/epoch_000/speaker_002_sample00_epoch000.wav",
+      "metadata": {
+        "text": "This is a quality test of the text-to-speech model.",
+        "speaker_id": "speaker_005",
+        "speaker_name": "Speaker_002",
+        "epoch": 0,
+        "sample_idx": 0,
+        "audio_length_seconds": 0.592108843537415,
+        "inference_time_seconds": 0.05424857711791992,
+        "sample_rate": 22050,
+        "text_length": 51,
+        "audio_samples": 13056
+      }
+    },
+    {
+      "speaker_id": "speaker_008",
+      "speaker_name": "Speaker_003",
+      "text": "The training is progressing very well today.",
+      "audio_path": "samples/epoch_000/speaker_003_sample00_epoch000.wav",
+      "metadata": {
+        "text": "The training is progressing very well today.",
+        "speaker_id": "speaker_008",
+        "speaker_name": "Speaker_003",
+        "epoch": 0,
+        "sample_idx": 0,
+        "audio_length_seconds": 0.47600907029478456,
+        "inference_time_seconds": 0.04941299057006836,
+        "sample_rate": 22050,
+        "text_length": 44,
+        "audio_samples": 10496
+      }
+    },
+    {
+      "speaker_id": "speaker_011",
+      "speaker_name": "Speaker_004",
+      "text": "Artificial intelligence and natural language processing.",
+      "audio_path": "samples/epoch_000/speaker_004_sample00_epoch000.wav",
+      "metadata": {
+        "text": "Artificial intelligence and natural language processing.",
+        "speaker_id": "speaker_011",
+        "speaker_name": "Speaker_004",
+        "epoch": 0,
+        "sample_idx": 0,
+        "audio_length_seconds": 0.6501587301587302,
+        "inference_time_seconds": 0.05237129592895508,
+        "sample_rate": 22050,
+        "text_length": 56,
+        "audio_samples": 14336
+      }
+    },
+    {
+      "speaker_id": "speaker_012",
+      "speaker_name": "Speaker_005",
+      "text": "Voice synthesis technology is evolving rapidly.",
+      "audio_path": "samples/epoch_000/speaker_005_sample00_epoch000.wav",
+      "metadata": {
+        "text": "Voice synthesis technology is evolving rapidly.",
+        "speaker_id": "speaker_012",
+        "speaker_name": "Speaker_005",
+        "epoch": 0,
+        "sample_idx": 0,
+        "audio_length_seconds": 0.5572789115646258,
+        "inference_time_seconds": 0.049909759521484375,
+        "sample_rate": 22050,
+        "text_length": 47,
+        "audio_samples": 12288
+      }
+    }
+  ],
+  "output_directory": "samples/epoch_000"
+}
