@@ -12,9 +12,6 @@ model:
   n_speakers: 52 # Total de falantes no dataset
   speaker_embedding_dim: 1024 # Aumentado para A100 (igual ao generator)
 
-  # Configurações específicas para inglês
-  text_processor: "english"
-
   # Configurações do generator (A100 otimizado)
   generator_initial_channels: 1024 # Aumentado para A100
   flow_gin_channels: 1024 # Parâmetro correto para flow
