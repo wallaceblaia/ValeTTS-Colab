@@ -28,7 +28,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from valetts.data.loaders.english_tts import create_english_dataloader
 from valetts.training.trainers.vits2 import VITS2Trainer
-from valetts.models.vits2.model import VITS2Model
+from valetts.models.vits2.model import VITS2
+from valetts.models.vits2.config import VITS2Config
 from valetts.training.callbacks.hybrid_checkpoint import create_hybrid_checkpoint_callbacks
 
 # Configurar logging
@@ -50,7 +51,7 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def create_model(config: dict) -> VITS2Model:
+def create_model(config: dict) -> VITS2:
     """Cria modelo VITS2 com configuração."""
     model_config = config['model']
     
@@ -65,13 +66,17 @@ def create_model(config: dict) -> VITS2Model:
         logger.warning(f"   Ajustando decoder para {speaker_dim}")
         model_config['decoder_hidden_dim'] = speaker_dim
     
-    model = VITS2Model(**model_config)
+    # Criar configuração VITS2
+    vits2_config = VITS2Config(**model_config)
+    
+    # Criar modelo com configuração
+    model = VITS2(vits2_config)
     logger.info(f"✅ Modelo VITS2 criado com {sum(p.numel() for p in model.parameters()):,} parâmetros")
     
     return model
 
 
-def create_trainer_module(model: VITS2Model, config: dict) -> VITS2Trainer:
+def create_trainer_module(model: VITS2, config: dict) -> VITS2Trainer:
     """Cria módulo de treinamento Lightning."""
     training_config = config['training']
     
