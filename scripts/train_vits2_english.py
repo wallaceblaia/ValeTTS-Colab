@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from valetts.data.loaders.english_tts import create_english_dataloader
 from valetts.training.trainers.vits2 import VITS2Trainer
 from valetts.models.vits2.model import VITS2Model
+from valetts.training.callbacks.hybrid_checkpoint import create_hybrid_checkpoint_callbacks
 
 # Configurar logging
 logging.basicConfig(
@@ -88,18 +89,9 @@ def setup_callbacks(config: dict):
     """Configura callbacks do Lightning."""
     callbacks = []
     
-    # Checkpoint callback
-    checkpoint_config = config['logging']['checkpoint']
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=checkpoint_config['dirpath'],
-        filename=checkpoint_config['filename'],
-        monitor=checkpoint_config['monitor'],
-        mode=checkpoint_config['mode'],
-        save_top_k=checkpoint_config['save_top_k'],
-        save_last=checkpoint_config['save_last'],
-        every_n_epochs=checkpoint_config['every_n_epochs'],
-    )
-    callbacks.append(checkpoint_callback)
+    # Sistema híbrido de checkpoints
+    hybrid_callbacks = create_hybrid_checkpoint_callbacks(config['logging'])
+    callbacks.extend(hybrid_callbacks)
     
     # Early stopping callback
     if config['logging']['early_stopping'].get('enabled', True):
@@ -113,6 +105,7 @@ def setup_callbacks(config: dict):
         callbacks.append(early_stop_callback)
     
     logger.info(f"✅ Configurados {len(callbacks)} callbacks")
+    logger.info(f"   📦 Checkpoints híbridos: 2 recentes + backup a cada época")
     return callbacks
 
 
@@ -154,6 +147,12 @@ def main():
     os.makedirs(config['logging']['checkpoint']['dirpath'], exist_ok=True)
     os.makedirs(config['logging']['tensorboard']['save_dir'], exist_ok=True)
     os.makedirs("logs", exist_ok=True)
+    
+    # Criar diretório de backup se habilitado
+    if config['logging'].get('checkpoint_backup', {}).get('enabled', False):
+        backup_dir = config['logging']['checkpoint_backup']['dirpath']
+        os.makedirs(backup_dir, exist_ok=True)
+        logger.info(f"🗄️ Diretório de backup criado: {backup_dir}")
     
     logger.info("🚀 Iniciando treinamento VITS2 para inglês")
     logger.info(f"   📊 Configuração: {Path(args.config).name}")

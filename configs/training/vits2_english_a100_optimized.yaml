@@ -101,14 +101,28 @@ logging:
   log_dir: "logs"
   experiment_name: "vits2_english_a100"
   
+  # SISTEMA HÍBRIDO DE CHECKPOINTS
   checkpoint:
+    # Checkpoints principais (2 últimos - se sobrescrevem)
     dirpath: "checkpoints/vits2_english_a100"
     filename: "vits2_en_a100-{epoch:03d}-{epoch/val_loss_total:.3f}"
     monitor: "epoch/val_loss_total"
     mode: "min"
-    save_top_k: 5
+    save_top_k: 2  # Apenas 2 checkpoints recentes
     save_last: true
-    every_n_epochs: 10
+    every_n_epochs: 1  # Salvar a cada época
+    auto_insert_metric_name: false
+    save_on_train_epoch_end: true
+  
+  # Checkpoints de backup (a cada 10 épocas - permanentes)
+  checkpoint_backup:
+    enabled: true
+    dirpath: "checkpoints/vits2_english_a100/backup"
+    filename: "vits2_en_a100_backup-{epoch:03d}-{epoch/val_loss_total:.3f}"
+    every_n_epochs: 10  # Backup a cada 10 épocas
+    save_top_k: -1  # Salvar todos os backups (nunca sobrescrever)
+    monitor: "epoch/val_loss_total"
+    mode: "min"
   
   early_stopping:
     monitor: "epoch/val_loss_total"
@@ -134,7 +148,7 @@ hardware:
 validation:
   val_check_interval: 1.0
   generate_samples: true
-  sample_every_n_epochs: 10
+  sample_every_n_epochs: 1  # Gerar amostras a cada época
   limit_val_batches: 1.0
   num_sanity_val_steps: 2
 
@@ -194,3 +208,13 @@ performance:
   # Compilação do modelo (PyTorch 2.0+)
   compile_model: true
   compile_mode: "default"
+
+# === Configuração de Amostras de Áudio ===
+audio_sampling:
+  enabled: true
+  sample_every_n_epochs: 1         # Gerar amostras a cada época
+  num_samples: 3                   # 3 amostras por checkpoint
+  max_length: 10.0                 # Máximo 10 segundos
+  sample_rate: 22050
+  save_dir: "samples"
+  speakers_to_sample: [0, 1, 2]    # Primeiros 3 speakers
